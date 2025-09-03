@@ -4,15 +4,6 @@ import pandas as pd
 import pydeck as pdk
 from streamlit_autorefresh import st_autorefresh
 from datetime import datetime, timedelta
-import time
-
-import streamlit as st
-import requests
-import pandas as pd
-import pydeck as pdk
-from streamlit_autorefresh import st_autorefresh
-from datetime import datetime, timedelta
-import time
 
 # ----------------------------
 # Page config must be first
@@ -20,16 +11,27 @@ import time
 st.set_page_config(page_title="SolarShield GPS Risk Monitor", layout="wide")
 
 # ----------------------------
-# Auto-refresh every 5 minutes (300,000 ms)
+# Config
 # ----------------------------
 interval_ms = 300000  # 5 minutes
+
+# ----------------------------
+# Initialize session state
+# ----------------------------
+if "last_refreshed" not in st.session_state:
+    st.session_state.last_refreshed = datetime.now()
+
+# ----------------------------
+# Auto-refresh trigger
+# ----------------------------
 count = st_autorefresh(interval=interval_ms, key="data_refresh")
 
-# # ----------------------------
-# # Manual refresh button
-# # ----------------------------
-# if st.button("🔄 Refresh Now"):
-#     st.rerun()
+# ----------------------------
+# Manual refresh button
+# ----------------------------
+if st.button("🔄 Refresh Now"):
+    st.session_state.last_refreshed = datetime.now()
+    st.rerun()
 
 # ----------------------------
 # Fetch NOAA Kp Index
@@ -41,31 +43,22 @@ kp_index = latest["kp_index"]
 time_tag = latest["time_tag"]
 
 # ----------------------------
-# Risk function by latitude
+# Risk function
 # ----------------------------
 def gps_risk(kp, latitude):
     lat = abs(latitude)
     if lat >= 60:
-        if kp >= 4:
-            return "High Risk"
-        elif kp >= 2:
-            return "Caution"
-        else:
-            return "Safe"
+        if kp >= 4: return "High Risk"
+        elif kp >= 2: return "Caution"
+        else: return "Safe"
     elif 30 <= lat < 60:
-        if kp >= 6:
-            return "High Risk"
-        elif kp >= 4:
-            return "Caution"
-        else:
-            return "Safe"
+        if kp >= 6: return "High Risk"
+        elif kp >= 4: return "Caution"
+        else: return "Safe"
     else:
-        if kp >= 8:
-            return "High Risk"
-        elif kp >= 6:
-            return "Caution"
-        else:
-            return "Safe"
+        if kp >= 8: return "High Risk"
+        elif kp >= 6: return "Caution"
+        else: return "Safe"
 
 # ----------------------------
 # Regions
@@ -90,7 +83,7 @@ for city, (lat, lon) in regions.items():
     data.append({"City": city, "Latitude": lat, "Longitude": lon, "Risk": risk})
 risk_df = pd.DataFrame(data)
 
-# Map risk levels to colors
+# Map colors
 color_map = {"Safe": [0, 200, 0], "Caution": [255, 165, 0], "High Risk": [200, 0, 0]}
 risk_df["Color"] = risk_df["Risk"].map(color_map)
 
@@ -100,31 +93,23 @@ risk_df["Color"] = risk_df["Risk"].map(color_map)
 st.title("🛰️ SolarShield - GPS Risk Monitor")
 st.subheader(f"Latest Kp Index: {kp_index} (Time: {time_tag})")
 
-# Visible last refresh timestamp
-last_refreshed = datetime.now()
-st.caption(f"⏱️ Last refreshed at: {last_refreshed.strftime('%Y-%m-%d %H:%M:%S')}")
+# Last refresh
+st.caption(f"⏱️ Last refreshed at: {st.session_state.last_refreshed.strftime('%Y-%m-%d %H:%M:%S')}")
 
 # ----------------------------
-# Countdown timer
+# Countdown (calculated live)
 # ----------------------------
-next_refresh_time = last_refreshed + timedelta(milliseconds=interval_ms)
-countdown_placeholder = st.empty()
-
-# Calculate seconds remaining
+next_refresh_time = st.session_state.last_refreshed + timedelta(milliseconds=interval_ms)
 seconds_remaining = int((next_refresh_time - datetime.now()).total_seconds())
-
-# Display countdown
-for i in range(seconds_remaining, -1, -1):
-    mins, secs = divmod(i, 60)
-    countdown_placeholder.markdown(
-        f"⌛ Next auto-refresh in: **{mins}m {secs:02d}s**"
-    )
-    time.sleep(1)
+if seconds_remaining < 0:
+    seconds_remaining = 0
+mins, secs = divmod(seconds_remaining, 60)
+st.markdown(f"⌛ Next auto-refresh in: **{mins}m {secs:02d}s**")
 
 # ----------------------------
-# Two columns: Table on left, Map on right
+# Two columns: Table + Map
 # ----------------------------
-col1, col2 = st.columns([1, 2])  # Adjust ratio: 1:2
+col1, col2 = st.columns([1, 2])
 
 with col1:
     st.subheader("📍 Location-specific Risks")

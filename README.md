@@ -1,0 +1,1 @@
+A self-updating risk dashboard that pulls live data from NOAA’s Space Weather Prediction Center (SWPC) and calculates a custom Energy Risk Index based on real-time geomagnetic activity (Kp Index) and displays guidance for operational decision-making. The goal is to translate complex space weather signals into a simple, actionable metric that operators or analysts can use.

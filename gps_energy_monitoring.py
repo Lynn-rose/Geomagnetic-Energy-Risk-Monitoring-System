@@ -13,7 +13,7 @@ st.set_page_config(page_title="SolarShield GPS Risk Monitor", layout="wide")
 # ----------------------------
 # Config
 # ----------------------------
-interval_ms = 300000  # 5 minutes
+interval_ms = 60000  # 1 minute
 
 # ----------------------------
 # Initialize session state

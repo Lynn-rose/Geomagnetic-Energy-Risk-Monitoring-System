@@ -6,43 +6,30 @@ from streamlit_autorefresh import st_autorefresh
 from datetime import datetime, timedelta
 import time
 
+import streamlit as st
+import requests
+import pandas as pd
+import pydeck as pdk
+from streamlit_autorefresh import st_autorefresh
+from datetime import datetime, timedelta
+import time
+
 # ----------------------------
 # Page config must be first
 # ----------------------------
 st.set_page_config(page_title="SolarShield GPS Risk Monitor", layout="wide")
 
-# # ----------------------------
-# # Auto-refresh every 5 minutes (300,000 ms)
-# # ----------------------------
-# interval_ms = 300000  # 5 minutes
-# count = st_autorefresh(interval=interval_ms, key="data_refresh")
+# ----------------------------
+# Auto-refresh every 5 minutes (300,000 ms)
+# ----------------------------
+interval_ms = 300000  # 5 minutes
+count = st_autorefresh(interval=interval_ms, key="data_refresh")
 
 # # ----------------------------
 # # Manual refresh button
 # # ----------------------------
 # if st.button("🔄 Refresh Now"):
-#     st.experimental_rerun()
-
-# ----------------------------
-# Refresh interval
-# ----------------------------
-interval_ms = 300000  # 5 minutes
-
-# Initialize session state for refresh timestamp
-if "last_refreshed" not in st.session_state:
-    st.session_state.last_refreshed = datetime.now()
-
-# ----------------------------
-# Manual refresh button
-# ----------------------------
-if st.button("🔄 Refresh Now"):
-    st.session_state.last_refreshed = datetime.now()  # reset timer
-    st.rerun()  # reload the app immediately
-
-# ----------------------------
-# Auto-refresh every 5 minutes
-# ----------------------------
-count = st_autorefresh(interval=interval_ms, key="data_refresh")
+#     st.rerun()
 
 # ----------------------------
 # Fetch NOAA Kp Index
@@ -113,34 +100,14 @@ risk_df["Color"] = risk_df["Risk"].map(color_map)
 st.title("🛰️ SolarShield - GPS Risk Monitor")
 st.subheader(f"Latest Kp Index: {kp_index} (Time: {time_tag})")
 
-# # Visible last refresh timestamp
-# last_refreshed = datetime.now()
-# st.caption(f"⏱️ Last refreshed at: {last_refreshed.strftime('%Y-%m-%d %H:%M:%S')}")
-
-# # ----------------------------
-# # Countdown timer
-# # ----------------------------
-# next_refresh_time = last_refreshed + timedelta(milliseconds=interval_ms)
-# countdown_placeholder = st.empty()
-
-# # Calculate seconds remaining
-# seconds_remaining = int((next_refresh_time - datetime.now()).total_seconds())
-
-# # Display countdown
-# for i in range(seconds_remaining, -1, -1):
-#     mins, secs = divmod(i, 60)
-#     countdown_placeholder.markdown(
-#         f"⌛ Next auto-refresh in: **{mins}m {secs:02d}s**"
-#     )
-#     time.sleep(1)
+# Visible last refresh timestamp
+last_refreshed = datetime.now()
+st.caption(f"⏱️ Last refreshed at: {last_refreshed.strftime('%Y-%m-%d %H:%M:%S')}")
 
 # ----------------------------
-# Display refresh info
-# ----------------------------
-st.caption(f"⏱️ Last refreshed at: {st.session_state.last_refreshed.strftime('%Y-%m-%d %H:%M:%S')}")
-
 # Countdown timer
-next_refresh_time = st.session_state.last_refreshed + timedelta(milliseconds=interval_ms)
+# ----------------------------
+next_refresh_time = last_refreshed + timedelta(milliseconds=interval_ms)
 countdown_placeholder = st.empty()
 
 # Calculate seconds remaining
@@ -181,7 +148,6 @@ with col2:
             tooltip={"text": "{City}: {Risk}"}
         )
     )
-
 
 
 # # ----------------------------

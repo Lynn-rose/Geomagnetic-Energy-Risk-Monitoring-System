@@ -74,6 +74,7 @@ regions = {
     "Nairobi, Kenya": (-1.3, 36.8),
     "Dodoma, Tanzania": (-6.17, 35.74),
     "Chennai, India": (13.08, 80.27),
+    "Nilgiris District, Tamil Nadu": (11.4, 77.0),
 }
 
 # Build DataFrame

@@ -26,6 +26,10 @@ if "last_refreshed" not in st.session_state:
 # ----------------------------
 count = st_autorefresh(interval=interval_ms, key="data_refresh")
 
+# If auto-refresh fired (count > 0 and divisible by refresh cycle), update last_refreshed
+if count > 0 and count % 1 == 0:  # every cycle
+    st.session_state.last_refreshed = datetime.now()
+
 # ----------------------------
 # Manual refresh button
 # ----------------------------
@@ -97,8 +101,11 @@ st.subheader(f"Latest Kp Index: {kp_index} (Time: {time_tag})")
 st.caption(f"⏱️ Last refreshed at: {st.session_state.last_refreshed.strftime('%Y-%m-%d %H:%M:%S')}")
 
 # ----------------------------
-# Countdown (calculated live)
+# Countdown (live ticking using 1s refresh)
 # ----------------------------
+# Add a lightweight 1-second autorefresh just for countdown
+st_autorefresh(interval=1000, key="countdown_tick")
+
 next_refresh_time = st.session_state.last_refreshed + timedelta(milliseconds=interval_ms)
 seconds_remaining = int((next_refresh_time - datetime.now()).total_seconds())
 if seconds_remaining < 0:
@@ -133,6 +140,7 @@ with col2:
             tooltip={"text": "{City}: {Risk}"}
         )
     )
+
 
 
 # # ----------------------------

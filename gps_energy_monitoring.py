@@ -20,8 +20,8 @@ count = st_autorefresh(interval=interval_ms, key="data_refresh")
 # ----------------------------
 # Manual refresh button
 # ----------------------------
-if st.button("🔄 Refresh Now"):
-    st.experimental_rerun()
+# if st.button("🔄 Refresh Now"):
+#     st.experimental_rerun()
 
 # ----------------------------
 # Fetch NOAA Kp Index

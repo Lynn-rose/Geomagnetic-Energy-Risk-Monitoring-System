@@ -3,11 +3,19 @@ import requests
 import pandas as pd
 import pydeck as pdk
 from streamlit_autorefresh import st_autorefresh
+from datetime import datetime, timedelta
+import time
+
+# ----------------------------
+# Page config must be first
+# ----------------------------
+st.set_page_config(page_title="SolarShield GPS Risk Monitor", layout="wide")
 
 # ----------------------------
 # Auto-refresh every 5 minutes (300,000 ms)
 # ----------------------------
-st_autorefresh(interval=300000, key="data_refresh")
+interval_ms = 300000  # 5 minutes
+count = st_autorefresh(interval=interval_ms, key="data_refresh")
 
 # ----------------------------
 # Manual refresh button
@@ -81,13 +89,33 @@ risk_df["Color"] = risk_df["Risk"].map(color_map)
 # ----------------------------
 # Streamlit Layout
 # ----------------------------
-st.set_page_config(page_title="SolarShield GPS Risk Monitor", layout="wide")
-
-# Header
 st.title("🛰️ SolarShield - GPS Risk Monitor")
 st.subheader(f"Latest Kp Index: {kp_index} (Time: {time_tag})")
 
+# Visible last refresh timestamp
+last_refreshed = datetime.now()
+st.caption(f"⏱️ Last refreshed at: {last_refreshed.strftime('%Y-%m-%d %H:%M:%S')}")
+
+# ----------------------------
+# Countdown timer
+# ----------------------------
+next_refresh_time = last_refreshed + timedelta(milliseconds=interval_ms)
+countdown_placeholder = st.empty()
+
+# Calculate seconds remaining
+seconds_remaining = int((next_refresh_time - datetime.now()).total_seconds())
+
+# Display countdown
+for i in range(seconds_remaining, -1, -1):
+    mins, secs = divmod(i, 60)
+    countdown_placeholder.markdown(
+        f"⌛ Next auto-refresh in: **{mins}m {secs:02d}s**"
+    )
+    time.sleep(1)
+
+# ----------------------------
 # Two columns: Table on left, Map on right
+# ----------------------------
 col1, col2 = st.columns([1, 2])  # Adjust ratio: 1:2
 
 with col1:
@@ -105,5 +133,11 @@ with col2:
         pickable=True,
     )
     view_state = pdk.ViewState(latitude=20, longitude=0, zoom=1.5, pitch=0)
-    st.pydeck_chart(pdk.Deck(layers=[layer], initial_view_state=view_state,
-                             tooltip={"text": "{City}: {Risk}"}))
+    st.pydeck_chart(
+        pdk.Deck(
+            layers=[layer],
+            initial_view_state=view_state,
+            tooltip={"text": "{City}: {Risk}"}
+        )
+    )
+

@@ -72,6 +72,7 @@ selected_horizon = st.sidebar.selectbox("Forecast horizon (3h per step):", horiz
 # Regions
 # ----------------------------
 regions = {
+    # --- India ---
     "Hyderabad, India": (17.4, 78.5),
     "New Delhi, India": (28.6, 77.2),
     "Bangalore, India": (12.97, 77.59),
@@ -80,15 +81,20 @@ regions = {
     "Mumbai, India": (19.1, 72.9),
     "Kolkata, India": (22.6, 88.4),
 
+    # --- Africa ---
     "Nairobi, Kenya": (-1.3, 36.8),
+    "Mombasa, Kenya": (-4.0, 39.7),
     "Dodoma, Tanzania": (-6.17, 35.74),
+    "Dar es Salaam, Tanzania": (-6.8, 39.3),
     "Cairo, Egypt": (30.0, 31.2),
     "Cape Town, South Africa": (-33.9, 18.4),
+    "Johannesburg, South Africa": (-26.2, 28.0),
     "Lagos, Nigeria": (6.5, 3.4),
-    "Mombasa, Kenya": (-4.0, 39.7),
-    "Dar es Salaam, Tanzania": (-6.8, 39.3),
+    "Accra, Ghana": (5.6, -0.2),
     "Dakar, Senegal": (14.7, -17.5),
+    "Addis Ababa, Ethiopia": (9.0, 38.7),
 
+    # --- Europe ---
     "Oslo, Norway": (59.9, 10.8),
     "London, UK": (51.5, -0.1),
     "Paris, France": (48.9, 2.4),
@@ -97,33 +103,55 @@ regions = {
     "Lisbon, Portugal": (38.7, -9.1),
     "Athens, Greece": (37.9, 23.7),
     "Istanbul, Turkey": (41.0, 28.9),
+    "Madrid, Spain": (40.4, -3.7),
+    "Rome, Italy": (41.9, 12.5),
+    "Warsaw, Poland": (52.2, 21.0),
+    "Stockholm, Sweden": (59.3, 18.1),
 
+    # --- North America ---
     "Anchorage, Alaska": (61.2, -149.9),
     "New York, USA": (40.7, -74.0),
     "Los Angeles, USA": (34.1, -118.2),
     "Miami, USA": (25.8, -80.2),
+    "Chicago, USA": (41.9, -87.6),
     "Toronto, Canada": (43.7, -79.4),
     "Vancouver, Canada": (49.3, -123.1),
     "Mexico City, Mexico": (19.4, -99.1),
     "Havana, Cuba": (23.1, -82.4),
 
+    # --- South America ---
     "São Paulo, Brazil": (-23.5, -46.6),
+    "Brasília, Brazil": (-15.8, -47.9),
     "Buenos Aires, Argentina": (-34.6, -58.4),
     "Lima, Peru": (-12.0, -77.0),
     "Bogotá, Colombia": (4.7, -74.1),
     "Santiago, Chile": (-33.4, -70.6),
+    "Quito, Ecuador": (-0.2, -78.5),
     "Rio de Janeiro, Brazil": (-22.9, -43.2),
     "Montevideo, Uruguay": (-34.9, -56.2),
 
+    # --- Asia ---
     "Sydney, Australia": (-33.9, 151.2),
+    "Melbourne, Australia": (-37.8, 145.0),
     "Tokyo, Japan": (35.7, 139.7),
+    "Osaka, Japan": (34.7, 135.5),
     "Beijing, China": (39.9, 116.4),
+    "Shanghai, China": (31.2, 121.5),
     "Seoul, South Korea": (37.6, 127.0),
     "Jakarta, Indonesia": (-6.2, 106.8),
     "Manila, Philippines": (14.6, 121.0),
     "Bangkok, Thailand": (13.7, 100.5),
+    "Hanoi, Vietnam": (21.0, 105.8),
+    "Singapore": (1.3, 103.8),
     "Auckland, New Zealand": (-36.8, 174.8),
+
+    # --- Middle East ---
+    "Riyadh, Saudi Arabia": (24.7, 46.7),
+    "Dubai, UAE": (25.2, 55.3),
+    "Tel Aviv, Israel": (32.1, 34.8),
+    "Tehran, Iran": (35.7, 51.4),
 }
+
 
 selected_region = st.sidebar.selectbox("🌍 Focus on region:", ["Global"] + list(regions.keys()))
 

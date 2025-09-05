@@ -24,7 +24,11 @@ if "last_refreshed" not in st.session_state:
 # ----------------------------
 # Auto-refresh trigger
 # ----------------------------
-count = st_autorefresh(interval=interval_ms, key="data_refresh")
+count = st_autorefresh(interval=interval_ms, limit=None, key="data_refresh")
+
+# Each auto-refresh updates last_refreshed
+if count > 0:
+    st.session_state.last_refreshed = datetime.now()
 
 # ----------------------------
 # Manual refresh button
@@ -61,7 +65,7 @@ def gps_risk(kp, latitude):
         else: return "Safe"
 
 # ----------------------------
-# Regions
+# Regions (expanded with coastal cities)
 # ----------------------------
 regions = {
     # ---- India ----
@@ -70,6 +74,8 @@ regions = {
     "Bangalore, India": (12.97, 77.59),
     "Chennai, India": (13.08, 80.27),
     "Nilgiris District, Tamil Nadu": (11.4, 77.0),
+    "Mumbai, India": (19.1, 72.9),
+    "Kolkata, India": (22.6, 88.4),
 
     # ---- Africa ----
     "Nairobi, Kenya": (-1.3, 36.8),
@@ -77,6 +83,9 @@ regions = {
     "Cairo, Egypt": (30.0, 31.2),
     "Cape Town, South Africa": (-33.9, 18.4),
     "Lagos, Nigeria": (6.5, 3.4),
+    "Mombasa, Kenya": (-4.0, 39.7),
+    "Dar es Salaam, Tanzania": (-6.8, 39.3),
+    "Dakar, Senegal": (14.7, -17.5),
 
     # ---- Europe ----
     "Oslo, Norway": (59.9, 10.8),
@@ -84,13 +93,19 @@ regions = {
     "Paris, France": (48.9, 2.4),
     "Berlin, Germany": (52.5, 13.4),
     "Moscow, Russia": (55.8, 37.6),
+    "Lisbon, Portugal": (38.7, -9.1),
+    "Athens, Greece": (37.9, 23.7),
+    "Istanbul, Turkey": (41.0, 28.9),
 
     # ---- North America ----
     "Anchorage, Alaska": (61.2, -149.9),
     "New York, USA": (40.7, -74.0),
     "Los Angeles, USA": (34.1, -118.2),
+    "Miami, USA": (25.8, -80.2),
     "Toronto, Canada": (43.7, -79.4),
+    "Vancouver, Canada": (49.3, -123.1),
     "Mexico City, Mexico": (19.4, -99.1),
+    "Havana, Cuba": (23.1, -82.4),
 
     # ---- South America ----
     "São Paulo, Brazil": (-23.5, -46.6),
@@ -98,6 +113,8 @@ regions = {
     "Lima, Peru": (-12.0, -77.0),
     "Bogotá, Colombia": (4.7, -74.1),
     "Santiago, Chile": (-33.4, -70.6),
+    "Rio de Janeiro, Brazil": (-22.9, -43.2),
+    "Montevideo, Uruguay": (-34.9, -56.2),
 
     # ---- Asia-Pacific ----
     "Sydney, Australia": (-33.9, 151.2),
@@ -105,17 +122,21 @@ regions = {
     "Beijing, China": (39.9, 116.4),
     "Seoul, South Korea": (37.6, 127.0),
     "Jakarta, Indonesia": (-6.2, 106.8),
+    "Manila, Philippines": (14.6, 121.0),
+    "Bangkok, Thailand": (13.7, 100.5),
+    "Auckland, New Zealand": (-36.8, 174.8),
 }
 
-
+# ----------------------------
 # Build DataFrame
+# ----------------------------
 data = []
 for city, (lat, lon) in regions.items():
     risk = gps_risk(kp_index, lat)
     data.append({"City": city, "Latitude": lat, "Longitude": lon, "Risk": risk})
 risk_df = pd.DataFrame(data)
 
-# Map colors
+# Map colors for plotting (internal use only)
 color_map = {"Safe": [0, 200, 0], "Caution": [255, 165, 0], "High Risk": [200, 0, 0]}
 risk_df["Color"] = risk_df["Risk"].map(color_map)
 
@@ -170,7 +191,18 @@ col1, col2 = st.columns([1, 2])
 
 with col1:
     st.subheader("📍 Location-specific Risks")
-    st.dataframe(filtered_df)
+
+    def highlight_risk(val):
+        if val == "High Risk":
+            return "background-color: red; color: white"
+        elif val == "Caution":
+            return "background-color: orange; color: black"
+        else:
+            return "background-color: green; color: white"
+
+    st.dataframe(
+        filtered_df.drop(columns=["Color"]).style.applymap(highlight_risk, subset=["Risk"])
+    )
 
 with col2:
     st.subheader("🌍 Risk Map")

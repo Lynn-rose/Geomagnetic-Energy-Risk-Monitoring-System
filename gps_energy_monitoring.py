@@ -6,7 +6,7 @@ from streamlit_autorefresh import st_autorefresh
 from datetime import datetime, timedelta
 
 # ----------------------------
-# Page config must be first
+# Page config
 # ----------------------------
 st.set_page_config(page_title="SolarShield GPS Risk Monitor", layout="wide")
 
@@ -25,8 +25,6 @@ if "last_refreshed" not in st.session_state:
 # Auto-refresh trigger
 # ----------------------------
 count = st_autorefresh(interval=interval_ms, limit=None, key="data_refresh")
-
-# Each auto-refresh updates last_refreshed
 if count > 0:
     st.session_state.last_refreshed = datetime.now()
 
@@ -38,13 +36,28 @@ if st.button("🔄 Refresh Now"):
     st.rerun()
 
 # ----------------------------
-# Fetch NOAA Kp Index
+# Fetch NOAA Kp Index (current)
 # ----------------------------
-url = "https://services.swpc.noaa.gov/json/planetary_k_index_1m.json"
-df = pd.read_json(url)
-latest = df.tail(1).iloc[0]
+url_current = "https://services.swpc.noaa.gov/json/planetary_k_index_1m.json"
+df_current = pd.read_json(url_current)
+latest = df_current.tail(1).iloc[0]
 kp_index = latest["kp_index"]
 time_tag = latest["time_tag"]
+
+# ----------------------------
+# Fetch NOAA Kp Forecast (multiple steps ahead)
+# ----------------------------
+url_forecast = "https://services.swpc.noaa.gov/json/planetary_k_index_forecast.json"
+df_forecast = pd.read_json(url_forecast).reset_index(drop=True)
+
+# Dropdown for forecast horizon
+st.sidebar.header("⚙️ Settings")
+horizon_options = list(range(1, len(df_forecast) + 1))  # 1h, 2h ... available
+selected_horizon = st.sidebar.selectbox("Forecast steps ahead (3h per step):", horizon_options, index=0)
+
+forecast_row = df_forecast.iloc[selected_horizon - 1]
+kp_forecast = forecast_row["kp_index"]
+forecast_time = forecast_row["time_tag"]
 
 # ----------------------------
 # Risk function
@@ -65,7 +78,7 @@ def gps_risk(kp, latitude):
         else: return "Safe"
 
 # ----------------------------
-# Regions (expanded with coastal cities)
+# Regions
 # ----------------------------
 regions = {
     # ---- India ----
@@ -128,69 +141,31 @@ regions = {
 }
 
 # ----------------------------
-# Build DataFrame
+# Build DataFrames
 # ----------------------------
-data = []
-for city, (lat, lon) in regions.items():
-    risk = gps_risk(kp_index, lat)
-    data.append({"City": city, "Latitude": lat, "Longitude": lon, "Risk": risk})
-risk_df = pd.DataFrame(data)
+def build_df(kp_value):
+    data = []
+    for city, (lat, lon) in regions.items():
+        risk = gps_risk(kp_value, lat)
+        data.append({"City": city, "Latitude": lat, "Longitude": lon, "Risk": risk})
+    df = pd.DataFrame(data)
+    color_map = {"Safe": [0, 200, 0], "Caution": [255, 165, 0], "High Risk": [200, 0, 0]}
+    df["Color"] = df["Risk"].map(color_map)
+    return df
 
-# Map colors for plotting (internal use only)
-color_map = {"Safe": [0, 200, 0], "Caution": [255, 165, 0], "High Risk": [200, 0, 0]}
-risk_df["Color"] = risk_df["Risk"].map(color_map)
+risk_df_current = build_df(kp_index)
+risk_df_forecast = build_df(kp_forecast)
 
 # ----------------------------
-# Streamlit Layout
+# Layout
 # ----------------------------
 st.title("🛰️ SolarShield - GPS Risk Monitor")
-st.subheader(f"Latest Kp Index: {kp_index} (Time: {time_tag})")
 
-# Last refresh
-st.caption(f"⏱️ Last refreshed at: {st.session_state.last_refreshed.strftime('%Y-%m-%d %H:%M:%S')}")
+col_main1, col_main2 = st.columns(2)
 
-# ----------------------------
-# Countdown (calculated live)
-# ----------------------------
-next_refresh_time = st.session_state.last_refreshed + timedelta(milliseconds=interval_ms)
-seconds_remaining = int((next_refresh_time - datetime.now()).total_seconds())
-if seconds_remaining < 0:
-    seconds_remaining = 0
-mins, secs = divmod(seconds_remaining, 60)
-st.markdown(f"⌛ Next auto-refresh in: **{mins}m {secs:02d}s**")
-
-# ----------------------------
-# Dropdown for City Selection
-# ----------------------------
-st.subheader("🌍 Select Location")
-city_options = ["All Cities"] + risk_df["City"].tolist()
-selected_city = st.selectbox("Choose a location:", city_options)
-
-# Filter DataFrame depending on selection
-if selected_city == "All Cities":
-    filtered_df = risk_df
-else:
-    filtered_df = risk_df[risk_df["City"] == selected_city]
-
-# Show selected city info
-if selected_city != "All Cities":
-    selected_info = filtered_df.iloc[0]
-    st.markdown(
-        f"""
-        ### 📌 Selected Location: **{selected_city}**
-        - 🌐 Latitude: {selected_info['Latitude']}
-        - 🌐 Longitude: {selected_info['Longitude']}
-        - ⚠️ Current Risk: **{selected_info['Risk']}**
-        """
-    )
-
-# ----------------------------
-# Two columns: Table + Map
-# ----------------------------
-col1, col2 = st.columns([1, 2])
-
-with col1:
-    st.subheader("📍 Location-specific Risks")
+# ---- Current risks ----
+with col_main1:
+    st.subheader(f"📊 Current Risks (Kp={kp_index}, Time={time_tag})")
 
     def highlight_risk(val):
         if val == "High Risk":
@@ -201,35 +176,56 @@ with col1:
             return "background-color: green; color: white"
 
     st.dataframe(
-        filtered_df.drop(columns=["Color"]).style.applymap(highlight_risk, subset=["Risk"])
+        risk_df_current.drop(columns=["Color"]).style.applymap(highlight_risk, subset=["Risk"])
     )
 
-with col2:
-    st.subheader("🌍 Risk Map")
-    layer = pdk.Layer(
-        "ScatterplotLayer",
-        data=filtered_df,
-        get_position=["Longitude", "Latitude"],
-        get_color="Color",
-        get_radius=200000,
-        pickable=True,
-    )
-
-    # Auto-zoom logic
-    if selected_city == "All Cities":
-        view_state = pdk.ViewState(latitude=20, longitude=0, zoom=1.5, pitch=0)
-    else:
-        view_state = pdk.ViewState(
-            latitude=float(selected_info["Latitude"]),
-            longitude=float(selected_info["Longitude"]),
-            zoom=5,
-            pitch=0
-        )
-
+    st.subheader("🌍 Current Risk Map")
     st.pydeck_chart(
         pdk.Deck(
-            layers=[layer],
-            initial_view_state=view_state,
+            layers=[pdk.Layer(
+                "ScatterplotLayer",
+                data=risk_df_current,
+                get_position=["Longitude", "Latitude"],
+                get_color="Color",
+                get_radius=200000,
+                pickable=True,
+            )],
+            initial_view_state=pdk.ViewState(latitude=20, longitude=0, zoom=1.5),
             tooltip={"text": "{City}: {Risk}"}
         )
     )
+
+# ---- Forecast risks ----
+with col_main2:
+    st.subheader(f"📈 Forecast Risks (Kp={kp_forecast}, Time={forecast_time})")
+    st.caption(f"Forecast horizon: {selected_horizon * 3} hours ahead")
+
+    st.dataframe(
+        risk_df_forecast.drop(columns=["Color"]).style.applymap(highlight_risk, subset=["Risk"])
+    )
+
+    st.subheader("🌍 Forecast Risk Map")
+    st.pydeck_chart(
+        pdk.Deck(
+            layers=[pdk.Layer(
+                "ScatterplotLayer",
+                data=risk_df_forecast,
+                get_position=["Longitude", "Latitude"],
+                get_color="Color",
+                get_radius=200000,
+                pickable=True,
+            )],
+            initial_view_state=pdk.ViewState(latitude=20, longitude=0, zoom=1.5),
+            tooltip={"text": "{City}: {Risk}"}
+        )
+    )
+
+# ----------------------------
+# Refresh info
+# ----------------------------
+st.caption(f"⏱️ Last refreshed at: {st.session_state.last_refreshed.strftime('%Y-%m-%d %H:%M:%S')}")
+next_refresh_time = st.session_state.last_refreshed + timedelta(milliseconds=interval_ms)
+seconds_remaining = int((next_refresh_time - datetime.now()).total_seconds())
+if seconds_remaining < 0: seconds_remaining = 0
+mins, secs = divmod(seconds_remaining, 60)
+st.markdown(f"⌛ Next auto-refresh in: **{mins}m {secs:02d}s**")

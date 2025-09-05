@@ -63,23 +63,29 @@ for line in forecast_text.splitlines():
         numbers = re.findall(r"\d+", line)
         kp_values.extend(map(int, numbers))
 
+# ----------------------------
 # Sidebar settings
+# ----------------------------
 st.sidebar.header("⚙️ Settings")
 horizon_options = list(range(1, 9))  # up to 24h ahead (8 steps × 3h)
 selected_horizon = st.sidebar.selectbox("Forecast horizon (3h per step):", horizon_options, index=0)
 
 # ----------------------------
-# Load world cities dataset (safe GitHub source)
+# Load world cities dataset (with lat/lon)
 # ----------------------------
 @st.cache_data
 def load_world_cities():
-    url = "https://raw.githubusercontent.com/datasets/world-cities/master/data/world-cities.csv"
+    url = "https://raw.githubusercontent.com/plotly/datasets/master/2014_world_cities.csv"
     df = pd.read_csv(url)
+    # Make sure column names are consistent
+    df.rename(columns={"lat": "latitude", "lon": "longitude", "Country": "country", "name": "city"}, inplace=True, errors="ignore")
     return df
 
 world_cities = load_world_cities()
 
-# Sidebar selection
+# ----------------------------
+# Sidebar region selection
+# ----------------------------
 st.sidebar.subheader("🌍 Region Selection")
 region_mode = st.sidebar.radio("View:", ["Global", "By Country & City"])
 
@@ -89,8 +95,8 @@ if region_mode == "Global":
 else:
     selected_country = st.sidebar.selectbox("Select Country:", sorted(world_cities["country"].unique()))
     filtered_cities = world_cities[world_cities["country"] == selected_country]
-    selected_city = st.sidebar.selectbox("Select City:", sorted(filtered_cities["name"].unique()))
-    city_row = filtered_cities[filtered_cities["name"] == selected_city].iloc[0]
+    selected_city = st.sidebar.selectbox("Select City:", sorted(filtered_cities["city"].unique()))
+    city_row = filtered_cities[filtered_cities["city"] == selected_city].iloc[0]
     selected_region = f"{selected_city}, {selected_country}"
     lat, lon = city_row["latitude"], city_row["longitude"]
 
@@ -133,7 +139,7 @@ def build_df(kp_value):
     for _, row in world_cities.iterrows():
         risk = gps_risk(kp_value, row["latitude"])
         data.append({
-            "City": row["name"],
+            "City": row["city"],
             "Country": row["country"],
             "Latitude": row["latitude"],
             "Longitude": row["longitude"],

@@ -69,63 +69,30 @@ horizon_options = list(range(1, 9))  # up to 24h ahead (8 steps × 3h)
 selected_horizon = st.sidebar.selectbox("Forecast horizon (3h per step):", horizon_options, index=0)
 
 # ----------------------------
-# Regions
+# Load world cities dataset
 # ----------------------------
-regions = {
-    "Hyderabad, India": (17.4, 78.5),
-    "New Delhi, India": (28.6, 77.2),
-    "Bangalore, India": (12.97, 77.59),
-    "Chennai, India": (13.08, 80.27),
-    "Nilgiris District, Tamil Nadu": (11.4, 77.0),
-    "Mumbai, India": (19.1, 72.9),
-    "Kolkata, India": (22.6, 88.4),
+@st.cache_data
+def load_world_cities():
+    url = "https://raw.githubusercontent.com/datasets/world-cities/master/data/world-cities.csv"
+    df = pd.read_csv(url)
+    return df
 
-    "Nairobi, Kenya": (-1.3, 36.8),
-    "Dodoma, Tanzania": (-6.17, 35.74),
-    "Cairo, Egypt": (30.0, 31.2),
-    "Cape Town, South Africa": (-33.9, 18.4),
-    "Lagos, Nigeria": (6.5, 3.4),
-    "Mombasa, Kenya": (-4.0, 39.7),
-    "Dar es Salaam, Tanzania": (-6.8, 39.3),
-    "Dakar, Senegal": (14.7, -17.5),
+world_cities = load_world_cities()
 
-    "Oslo, Norway": (59.9, 10.8),
-    "London, UK": (51.5, -0.1),
-    "Paris, France": (48.9, 2.4),
-    "Berlin, Germany": (52.5, 13.4),
-    "Moscow, Russia": (55.8, 37.6),
-    "Lisbon, Portugal": (38.7, -9.1),
-    "Athens, Greece": (37.9, 23.7),
-    "Istanbul, Turkey": (41.0, 28.9),
+# Sidebar selection
+st.sidebar.subheader("🌍 Region Selection")
+region_mode = st.sidebar.radio("View:", ["Global", "By Country & City"])
 
-    "Anchorage, Alaska": (61.2, -149.9),
-    "New York, USA": (40.7, -74.0),
-    "Los Angeles, USA": (34.1, -118.2),
-    "Miami, USA": (25.8, -80.2),
-    "Toronto, Canada": (43.7, -79.4),
-    "Vancouver, Canada": (49.3, -123.1),
-    "Mexico City, Mexico": (19.4, -99.1),
-    "Havana, Cuba": (23.1, -82.4),
-
-    "São Paulo, Brazil": (-23.5, -46.6),
-    "Buenos Aires, Argentina": (-34.6, -58.4),
-    "Lima, Peru": (-12.0, -77.0),
-    "Bogotá, Colombia": (4.7, -74.1),
-    "Santiago, Chile": (-33.4, -70.6),
-    "Rio de Janeiro, Brazil": (-22.9, -43.2),
-    "Montevideo, Uruguay": (-34.9, -56.2),
-
-    "Sydney, Australia": (-33.9, 151.2),
-    "Tokyo, Japan": (35.7, 139.7),
-    "Beijing, China": (39.9, 116.4),
-    "Seoul, South Korea": (37.6, 127.0),
-    "Jakarta, Indonesia": (-6.2, 106.8),
-    "Manila, Philippines": (14.6, 121.0),
-    "Bangkok, Thailand": (13.7, 100.5),
-    "Auckland, New Zealand": (-36.8, 174.8),
-}
-
-selected_region = st.sidebar.selectbox("🌍 Focus on region:", ["Global"] + list(regions.keys()))
+if region_mode == "Global":
+    selected_region = "Global"
+    lat, lon = 20, 0  # Default global view
+else:
+    selected_country = st.sidebar.selectbox("Select Country:", sorted(world_cities["country"].unique()))
+    filtered_cities = world_cities[world_cities["country"] == selected_country]
+    selected_city = st.sidebar.selectbox("Select City:", sorted(filtered_cities["name"].unique()))
+    city_row = filtered_cities[filtered_cities["name"] == selected_city].iloc[0]
+    selected_region = f"{selected_city}, {selected_country}"
+    lat, lon = city_row["latitude"], city_row["longitude"]
 
 # ----------------------------
 # Forecast selection
@@ -163,9 +130,15 @@ def gps_risk(kp, latitude):
 # ----------------------------
 def build_df(kp_value):
     data = []
-    for city, (lat, lon) in regions.items():
-        risk = gps_risk(kp_value, lat)
-        data.append({"City": city, "Latitude": lat, "Longitude": lon, "Risk": risk})
+    for _, row in world_cities.iterrows():
+        risk = gps_risk(kp_value, row["latitude"])
+        data.append({
+            "City": row["name"],
+            "Country": row["country"],
+            "Latitude": row["latitude"],
+            "Longitude": row["longitude"],
+            "Risk": risk
+        })
     df = pd.DataFrame(data)
     color_map = {"Safe": [0, 200, 0], "Caution": [255, 165, 0], "High Risk": [200, 0, 0]}
     df["Color"] = df["Risk"].map(color_map)
@@ -185,7 +158,6 @@ col_main1, col_main2 = st.columns(2)
 if selected_region == "Global":
     view_state = pdk.ViewState(latitude=20, longitude=0, zoom=1.5, pitch=0)
 else:
-    lat, lon = regions[selected_region]
     view_state = pdk.ViewState(latitude=lat, longitude=lon, zoom=5, pitch=20)
 
 # ---- Current risks ----
@@ -216,7 +188,7 @@ with col_main1:
                 pickable=True,
             )],
             initial_view_state=view_state,
-            tooltip={"text": "{City}: {Risk}"}
+            tooltip={"text": "{City}, {Country}: {Risk}"}
         )
     )
 
@@ -240,7 +212,7 @@ with col_main2:
                 pickable=True,
             )],
             initial_view_state=view_state,
-            tooltip={"text": "{City}: {Risk}"}
+            tooltip={"text": "{City}, {Country}: {Risk}"}
         )
     )
 

@@ -40,6 +40,7 @@ if st.button("🔄 Refresh Now"):
 if st.session_state.manual_refresh:
     st.session_state.manual_refresh = False
     st.session_state.last_refreshed = datetime.now()
+    st.rerun()  # ✅ force reload
 
 # ----------------------------
 # Fetch NOAA Kp Index (current, 1-minute data)
@@ -152,7 +153,6 @@ regions = {
     "Tehran, Iran": (35.7, 51.4),
 }
 
-
 selected_region = st.sidebar.selectbox("🌍 Focus on region:", ["Global"] + list(regions.keys()))
 
 # ----------------------------
@@ -212,9 +212,13 @@ col_main1, col_main2 = st.columns(2)
 # Map zoom logic
 if selected_region == "Global":
     view_state = pdk.ViewState(latitude=20, longitude=0, zoom=1.5, pitch=0)
+    df_display_current = risk_df_current
+    df_display_forecast = risk_df_forecast
 else:
     lat, lon = regions[selected_region]
     view_state = pdk.ViewState(latitude=lat, longitude=lon, zoom=5, pitch=20)
+    df_display_current = risk_df_current[risk_df_current["City"] == selected_region]
+    df_display_forecast = risk_df_forecast[risk_df_forecast["City"] == selected_region]
 
 # ---- Current risks ----
 with col_main1:
@@ -229,7 +233,7 @@ with col_main1:
             return "background-color: green; color: white"
 
     st.dataframe(
-        risk_df_current.drop(columns=["Color"]).style.applymap(highlight_risk, subset=["Risk"])
+        df_display_current.drop(columns=["Color"]).style.applymap(highlight_risk, subset=["Risk"])
     )
 
     st.subheader("🌍 Current Risk Map")
@@ -237,7 +241,7 @@ with col_main1:
         pdk.Deck(
             layers=[pdk.Layer(
                 "ScatterplotLayer",
-                data=risk_df_current,
+                data=df_display_current,
                 get_position=["Longitude", "Latitude"],
                 get_color="Color",
                 get_radius=200000,
@@ -253,7 +257,7 @@ with col_main2:
     st.subheader(f"📈 Forecast Risks (Kp={kp_forecast}, Horizon={forecast_time})")
 
     st.dataframe(
-        risk_df_forecast.drop(columns=["Color"]).style.applymap(highlight_risk, subset=["Risk"])
+        df_display_forecast.drop(columns=["Color"]).style.applymap(highlight_risk, subset=["Risk"])
     )
 
     st.subheader("🌍 Forecast Risk Map")
@@ -261,7 +265,7 @@ with col_main2:
         pdk.Deck(
             layers=[pdk.Layer(
                 "ScatterplotLayer",
-                data=risk_df_forecast,
+                data=df_display_forecast,
                 get_position=["Longitude", "Latitude"],
                 get_color="Color",
                 get_radius=200000,
@@ -277,8 +281,6 @@ with col_main2:
 # ----------------------------
 st.caption(f"⏱️ Last refreshed at: {st.session_state.last_refreshed.strftime('%Y-%m-%d %H:%M:%S')}")
 next_refresh_time = st.session_state.last_refreshed + timedelta(milliseconds=interval_ms)
-seconds_remaining = int((next_refresh_time - datetime.now()).total_seconds())
-if seconds_remaining < 0:
-    seconds_remaining = 0
+seconds_remaining = max(0, int((next_refresh_time - datetime.now()).total_seconds()))
 mins, secs = divmod(seconds_remaining, 60)
 st.markdown(f"⌛ Next auto-refresh in: **{mins}m {secs:02d}s**")

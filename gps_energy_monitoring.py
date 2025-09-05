@@ -69,12 +69,13 @@ horizon_options = list(range(1, 9))  # up to 24h ahead (8 steps × 3h)
 selected_horizon = st.sidebar.selectbox("Forecast horizon (3h per step):", horizon_options, index=0)
 
 # ----------------------------
-# Load world cities dataset
+# Load world cities dataset (with lat/lon)
 # ----------------------------
 @st.cache_data
 def load_world_cities():
-    url = "https://raw.githubusercontent.com/datasets/world-cities/master/data/world-cities.csv"
+    url = "https://raw.githubusercontent.com/plotly/datasets/master/2014_world_cities.csv"
     df = pd.read_csv(url)
+    df.rename(columns={"lat": "latitude", "lon": "longitude"}, inplace=True)
     return df
 
 world_cities = load_world_cities()
@@ -219,10 +220,12 @@ with col_main2:
 # ----------------------------
 # Refresh info
 # ----------------------------
-st.caption(f"⏱️ Last refreshed at: {st.session_state.last_refreshed.strftime('%Y-%m-%d %H:%M:%S')}")
+last_time = st.session_state.last_refreshed.strftime("%Y-%m-%d %H:%M:%S")
 next_refresh_time = st.session_state.last_refreshed + timedelta(milliseconds=interval_ms)
-seconds_remaining = int((next_refresh_time - datetime.now()).total_seconds())
-if seconds_remaining < 0:
-    seconds_remaining = 0
+seconds_remaining = max(0, int((next_refresh_time - datetime.now()).total_seconds()))
 mins, secs = divmod(seconds_remaining, 60)
-st.markdown(f"⌛ Next auto-refresh in: **{mins}m {secs:02d}s**")
+
+with st.expander("🔄 Refresh Information", expanded=True):
+    st.markdown(f"**⏱️ Last refreshed:** {last_time}")
+    st.markdown(f"**⌛ Next auto-refresh in:** {mins}m {secs:02d}s")
+    st.progress((interval_ms - seconds_remaining * 1000) / interval_ms)

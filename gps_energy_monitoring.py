@@ -4,6 +4,7 @@ import pandas as pd
 import pydeck as pdk
 from streamlit_autorefresh import st_autorefresh
 from datetime import datetime, timedelta
+import re
 
 # ----------------------------
 # Page config
@@ -36,7 +37,7 @@ if st.button("🔄 Refresh Now"):
     st.rerun()
 
 # ----------------------------
-# Fetch NOAA Kp Index (current)
+# Fetch NOAA Kp Index (current, 1-minute data)
 # ----------------------------
 url_current = "https://services.swpc.noaa.gov/json/planetary_k_index_1m.json"
 df_current = pd.read_json(url_current)
@@ -45,19 +46,33 @@ kp_index = latest["kp_index"]
 time_tag = latest["time_tag"]
 
 # ----------------------------
-# Fetch NOAA Kp Forecast (multiple steps ahead)
+# Fetch NOAA Kp Forecast (3-day text file)
 # ----------------------------
-url_forecast = "https://services.swpc.noaa.gov/json/planetary_k_index_forecast.json"
-df_forecast = pd.read_json(url_forecast).reset_index(drop=True)
+url_forecast = "https://services.swpc.noaa.gov/text/3-day-forecast.txt"
+forecast_text = requests.get(url_forecast).text
 
-# Dropdown for forecast horizon
+# Extract kp lines
+kp_lines = [line for line in forecast_text.splitlines() if "Kp indices" in line]
+
+# Sidebar horizon selector
 st.sidebar.header("⚙️ Settings")
-horizon_options = list(range(1, len(df_forecast) + 1))  # 1h, 2h ... available
-selected_horizon = st.sidebar.selectbox("Forecast steps ahead (3h per step):", horizon_options, index=0)
+horizon_options = list(range(1, 9))  # up to 24h ahead (8 steps × 3h)
+selected_horizon = st.sidebar.selectbox("Forecast horizon (3h per step):", horizon_options, index=0)
 
-forecast_row = df_forecast.iloc[selected_horizon - 1]
-kp_forecast = forecast_row["kp_index"]
-forecast_time = forecast_row["time_tag"]
+if kp_lines:
+    # Extract numbers from first kp line
+    kp_values = re.findall(r"\d+", kp_lines[0])
+    kp_values = list(map(int, kp_values))
+
+    if selected_horizon <= len(kp_values):
+        kp_forecast = kp_values[selected_horizon - 1]
+    else:
+        kp_forecast = kp_values[-1]
+
+    forecast_time = f"{selected_horizon * 3} hours ahead"
+else:
+    kp_forecast = kp_index
+    forecast_time = "Unavailable"
 
 # ----------------------------
 # Risk function
@@ -197,8 +212,7 @@ with col_main1:
 
 # ---- Forecast risks ----
 with col_main2:
-    st.subheader(f"📈 Forecast Risks (Kp={kp_forecast}, Time={forecast_time})")
-    st.caption(f"Forecast horizon: {selected_horizon * 3} hours ahead")
+    st.subheader(f"📈 Forecast Risks (Kp={kp_forecast}, Horizon={forecast_time})")
 
     st.dataframe(
         risk_df_forecast.drop(columns=["Color"]).style.applymap(highlight_risk, subset=["Risk"])

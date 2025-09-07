@@ -21,20 +21,19 @@ DATA_REFRESH_MS = 60000  # refresh data every 60s
 # ----------------------------
 if "last_refreshed" not in st.session_state:
     st.session_state.last_refreshed = datetime.now()
-if "manual_refresh" not in st.session_state:
-    st.session_state.manual_refresh = False
 if "next_refresh_time" not in st.session_state:
     st.session_state.next_refresh_time = datetime.now() + timedelta(milliseconds=DATA_REFRESH_MS)
 
 # ----------------------------
-# Auto-refresh trigger (every 60s)
+# UI auto-refresh trigger (every 1s for countdown)
 # ----------------------------
-count = st_autorefresh(interval=DATA_REFRESH_MS, limit=None, key="data_refresh")
+tick = st_autorefresh(interval=1000, limit=None, key="ui_refresh")
 
-# When autorefresh happens
-if count > 0:
-    st.session_state.last_refreshed = datetime.now()
-    st.session_state.next_refresh_time = st.session_state.last_refreshed + timedelta(milliseconds=DATA_REFRESH_MS)
+# Refresh data only every DATA_REFRESH_MS
+now = datetime.now()
+if (now - st.session_state.last_refreshed).total_seconds() * 1000 >= DATA_REFRESH_MS:
+    st.session_state.last_refreshed = now
+    st.session_state.next_refresh_time = now + timedelta(milliseconds=DATA_REFRESH_MS)
 
 # ----------------------------
 # Manual refresh button
@@ -45,10 +44,9 @@ if st.button("🔄 Refresh Now"):
     st.rerun()
 
 # ----------------------------
-# Countdown (stable, no flicker)
+# Countdown (updates every second)
 # ----------------------------
 st.caption(f"⏱️ Last refreshed at: {st.session_state.last_refreshed.strftime('%Y-%m-%d %H:%M:%S')}")
-
 seconds_remaining = max(0, int((st.session_state.next_refresh_time - datetime.now()).total_seconds()))
 mins, secs = divmod(seconds_remaining, 60)
 st.caption(f"⌛ Next auto-refresh in: **{mins}m {secs:02d}s**")
@@ -198,7 +196,7 @@ def gps_risk(kp, latitude):
         else: return "Safe"
 
 # ----------------------------
-# Build DataFrames
+# Build DataFrames (rounded lat/lon)
 # ----------------------------
 def build_df(kp_value):
     data = []
@@ -206,8 +204,8 @@ def build_df(kp_value):
         risk = gps_risk(kp_value, lat)
         data.append({
             "City": city,
-            "Latitude": round(lat, 2),   # ✅ rounded
-            "Longitude": round(lon, 2),  # ✅ rounded
+            "Latitude": round(lat, 2),
+            "Longitude": round(lon, 2),
             "Risk": risk
         })
     df = pd.DataFrame(data)

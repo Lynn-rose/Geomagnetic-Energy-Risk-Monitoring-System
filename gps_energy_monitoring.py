@@ -5,7 +5,6 @@ import pydeck as pdk
 from streamlit_autorefresh import st_autorefresh
 from datetime import datetime, timedelta
 import re
-import time
 
 # ----------------------------
 # Page config
@@ -132,7 +131,7 @@ regions = {
     "Rio de Janeiro, Brazil": (-22.9, -43.2),
     "Montevideo, Uruguay": (-34.9, -56.2),
 
-    # --- Asia ---
+    # --- Asia-Pacific ---
     "Sydney, Australia": (-33.9, 151.2),
     "Melbourne, Australia": (-37.8, 145.0),
     "Tokyo, Japan": (35.7, 139.7),
@@ -283,6 +282,19 @@ with col_main2:
     )
 
 # ----------------------------
+# Countdown (non-blocking)
+# ----------------------------
+st.caption(f"⏱️ Last refreshed at: {st.session_state.last_refreshed.strftime('%Y-%m-%d %H:%M:%S')}")
+
+# Calculate next refresh
+next_refresh_time = st.session_state.last_refreshed + timedelta(milliseconds=DATA_REFRESH_MS)
+seconds_remaining = max(0, int((next_refresh_time - datetime.now()).total_seconds()))
+mins, secs = divmod(seconds_remaining, 60)
+
+st.caption(f"⌛ Next auto-refresh in: **{mins}m {secs:02d}s**")
+    
+
+# ----------------------------
 # Legend
 # ----------------------------
 st.markdown("### 🗺️ Risk Scoring Legend")
@@ -295,19 +307,4 @@ It reflects the likelihood of geomagnetic disturbances affecting GPS and power s
 - 🔴 **High Risk** – Strong geomagnetic storm likelihood, GPS/power disruptions possible.  
 """)
 
-# ----------------------------
-# Countdown (no blinking maps)
-# ----------------------------
-st.caption(f"⏱️ Last refreshed at: {st.session_state.last_refreshed.strftime('%Y-%m-%d %H:%M:%S')}")
 
-next_refresh_time = st.session_state.last_refreshed + timedelta(milliseconds=DATA_REFRESH_MS)
-countdown_placeholder = st.empty()
-
-while True:
-    seconds_remaining = max(0, int((next_refresh_time - datetime.now()).total_seconds()))
-    mins, secs = divmod(seconds_remaining, 60)
-    countdown_placeholder.markdown(f"⌛ Next auto-refresh in: **{mins}m {secs:02d}s**")
-
-    if seconds_remaining <= 0:
-        st.rerun()
-    time.sleep(1)

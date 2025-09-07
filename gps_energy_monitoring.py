@@ -14,37 +14,48 @@ st.set_page_config(page_title="SolarShield GPS Risk Monitor", layout="wide")
 # ----------------------------
 # Config
 # ----------------------------
-REFRESH_INTERVAL = 60  # seconds
+DATA_REFRESH_MS = 60000  # refresh data every 60s
 
 # ----------------------------
 # Initialize session state
 # ----------------------------
 if "last_refreshed" not in st.session_state:
     st.session_state.last_refreshed = datetime.now()
-
 if "next_refresh_time" not in st.session_state:
-    st.session_state.next_refresh_time = st.session_state.last_refreshed + timedelta(seconds=REFRESH_INTERVAL)
+    st.session_state.next_refresh_time = datetime.now() + timedelta(milliseconds=DATA_REFRESH_MS)
+
+# ----------------------------
+# Auto-refresh trigger (every 60s for data)
+# ----------------------------
+count = st_autorefresh(interval=DATA_REFRESH_MS, limit=None, key="data_refresh")
+
+# When autorefresh happens
+if count > 0:
+    st.session_state.last_refreshed = datetime.now()
+    st.session_state.next_refresh_time = st.session_state.last_refreshed + timedelta(milliseconds=DATA_REFRESH_MS)
 
 # ----------------------------
 # Manual refresh button
 # ----------------------------
 if st.button("🔄 Refresh Now"):
     st.session_state.last_refreshed = datetime.now()
-    st.session_state.next_refresh_time = st.session_state.last_refreshed + timedelta(seconds=REFRESH_INTERVAL)
+    st.session_state.next_refresh_time = st.session_state.last_refreshed + timedelta(milliseconds=DATA_REFRESH_MS)
     st.rerun()
 
 # ----------------------------
-# Countdown display (live timer)
+# Countdown (live, non-blocking)
 # ----------------------------
+st.caption(f"⏱️ Last refreshed at: {st.session_state.last_refreshed.strftime('%Y-%m-%d %H:%M:%S')}")
+
+# trigger only the countdown refresh every 1 second
+st_autorefresh(interval=1000, key="countdown_refresh")
+
+# compute remaining seconds
 seconds_remaining = max(0, int((st.session_state.next_refresh_time - datetime.now()).total_seconds()))
 mins, secs = divmod(seconds_remaining, 60)
-st.caption(f"⌛ Next auto-refresh in: **{mins}m {secs:02d}s**")
 
-# Trigger auto-refresh when time expires
-count = st_autorefresh(interval=REFRESH_INTERVAL * 1000, limit=None, key="auto_refresh")
-if count > 0:
-    st.session_state.last_refreshed = datetime.now()
-    st.session_state.next_refresh_time = st.session_state.last_refreshed + timedelta(seconds=REFRESH_INTERVAL)
+# live countdown (updates every second without flickering maps/tables)
+st.caption(f"⌛ Next auto-refresh in: **{mins}m {secs:02d}s**")
 
 # ----------------------------
 # Fetch NOAA Kp Index (current, 1-minute data)
@@ -135,7 +146,7 @@ regions = {
     "Rio de Janeiro, Brazil": (-22.9, -43.2),
     "Montevideo, Uruguay": (-34.9, -56.2),
 
-    # --- Asia ---
+    # --- Asia & Pacific ---
     "Sydney, Australia": (-33.9, 151.2),
     "Melbourne, Australia": (-37.8, 145.0),
     "Tokyo, Japan": (35.7, 139.7),

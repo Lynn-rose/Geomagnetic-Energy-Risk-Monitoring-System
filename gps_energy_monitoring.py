@@ -187,11 +187,8 @@ risk_df_current = build_df(kp_index)
 risk_df_forecast = build_df(kp_forecast)
 
 # ----------------------------
-# Layout
+# Refresh info (above title)
 # ----------------------------
-st.title("🛰️ SolarShield - GPS Risk Monitor")
-
-# ---- Refresh controls ----
 col1, col2, col3 = st.columns([1, 1, 2])
 with col1:
     if st.button("🔄 Refresh Now"):
@@ -201,6 +198,11 @@ with col2:
 with col3:
     next_refresh = datetime.utcnow().replace(microsecond=0) + pd.Timedelta(seconds=REFRESH_INTERVAL)
     st.metric("Next Auto-Refresh", next_refresh.strftime("%Y-%m-%d %H:%M:%S UTC"))
+
+# ----------------------------
+# Title
+# ----------------------------
+st.title("🛰️ SolarShield - GPS Risk Monitor")
 
 # ---- Legend at top ----
 st.markdown("### 🗺️ Risk Scoring Explained (For Local Communities)")
@@ -214,21 +216,23 @@ This tool shows how space weather (solar storms) may affect **GPS signals**.
 👉 *Think of it like weather alerts: Green = good, Orange = take care, Red = stormy skies for GPS.*
 """)
 
-col_main1, col_main2 = st.columns(2)
-
+# ----------------------------
 # Map zoom logic
+# ----------------------------
 if selected_region == "Global":
     view_state = pdk.ViewState(latitude=20, longitude=0, zoom=1.5, pitch=0)
     df_display_current = risk_df_current
     df_display_forecast = risk_df_forecast
 else:
     lat, lon = regions[selected_region]
-    view_state = pdk.ViewState(latitude=lat, longitude=lon, zoom=4, pitch=20)
-    df_display_current = risk_df_current.copy()
-    df_display_forecast = risk_df_forecast.copy()
-    # Highlight selected region
-    df_display_current["Highlight"] = df_display_current["City"].eq(selected_region)
-    df_display_forecast["Highlight"] = df_display_forecast["City"].eq(selected_region)
+    view_state = pdk.ViewState(latitude=lat, longitude=lon, zoom=5, pitch=20)
+    df_display_current = risk_df_current[risk_df_current["City"] == selected_region]
+    df_display_forecast = risk_df_forecast[risk_df_forecast["City"] == selected_region]
+
+# ----------------------------
+# Layout split
+# ----------------------------
+col_main1, col_main2 = st.columns(2)
 
 # ---- Current risks ----
 with col_main1:

@@ -161,7 +161,7 @@ regions = {
     "Dubai, UAE": (25.2, 55.3),
     "Tel Aviv, Israel": (32.1, 34.8),
     "Tehran, Iran": (35.7, 51.4),
-}
+}}
 
 selected_region = st.sidebar.selectbox("🌍 Focus on region:", ["Global"] + list(regions.keys()))
 

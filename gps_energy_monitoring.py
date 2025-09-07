@@ -2,7 +2,7 @@ import streamlit as st
 import requests
 import pandas as pd
 import pydeck as pdk
-from datetime import datetime
+from datetime import datetime, timedelta
 import re
 from streamlit_autorefresh import st_autorefresh
 
@@ -130,7 +130,7 @@ regions = {
     "Dubai, UAE": (25.2, 55.3),
     "Tel Aviv, Israel": (32.1, 34.8),
     "Tehran, Iran": (35.7, 51.4),
-}
+}}
 selected_region = st.sidebar.selectbox("🌍 Focus on region:", ["Global"] + list(regions.keys()))
 
 # ----------------------------
@@ -187,17 +187,20 @@ risk_df_current = build_df(kp_index)
 risk_df_forecast = build_df(kp_forecast)
 
 # ----------------------------
-# Refresh info (above title)
+# Refresh controls (stacked)
 # ----------------------------
-col1, col2, col3 = st.columns([1, 1, 2])
-with col1:
-    if st.button("🔄 Refresh Now"):
+refresh_placeholder = st.container()
+with refresh_placeholder:
+    if st.button("🔄 Refresh Now", use_container_width=True):
         st.experimental_rerun()
-with col2:
-    st.metric("Last Refresh", datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC"))
-with col3:
-    next_refresh = datetime.utcnow().replace(microsecond=0) + pd.Timedelta(seconds=REFRESH_INTERVAL)
-    st.metric("Next Auto-Refresh", next_refresh.strftime("%Y-%m-%d %H:%M:%S UTC"))
+
+    st.caption(f"🕒 Last refreshed at: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}")
+
+    # Countdown
+    next_refresh_time = datetime.utcnow() + timedelta(seconds=REFRESH_INTERVAL)
+    seconds_remaining = (next_refresh_time - datetime.utcnow()).seconds
+    mins, secs = divmod(seconds_remaining, 60)
+    st.caption(f"⌛ Next auto-refresh in: {mins}m {secs:02d}s")
 
 # ----------------------------
 # Title

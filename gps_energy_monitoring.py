@@ -43,6 +43,16 @@ if st.session_state.manual_refresh:
     st.rerun()  # ✅ force reload
 
 # ----------------------------
+# Countdown (just below refresh button, no flicker)
+# ----------------------------
+st.caption(f"⏱️ Last refreshed at: {st.session_state.last_refreshed.strftime('%Y-%m-%d %H:%M:%S')}")
+
+next_refresh_time = st.session_state.last_refreshed + timedelta(milliseconds=DATA_REFRESH_MS)
+seconds_remaining = max(0, int((next_refresh_time - datetime.now()).total_seconds()))
+mins, secs = divmod(seconds_remaining, 60)
+st.caption(f"⌛ Next auto-refresh in: **{mins}m {secs:02d}s**")
+
+# ----------------------------
 # Fetch NOAA Kp Index (current, 1-minute data)
 # ----------------------------
 url_current = "https://services.swpc.noaa.gov/json/planetary_k_index_1m.json"
@@ -195,8 +205,8 @@ def build_df(kp_value):
         risk = gps_risk(kp_value, lat)
         data.append({
             "City": city,
-            "Latitude": round(lat, 2),   # ✅ rounded
-            "Longitude": round(lon, 2),  # ✅ rounded
+            "Latitude": round(lat, 2),   # ✅ rounded to 2dp
+            "Longitude": round(lon, 2),  # ✅ rounded to 2dp
             "Risk": risk
         })
     df = pd.DataFrame(data)
@@ -282,19 +292,6 @@ with col_main2:
     )
 
 # ----------------------------
-# Countdown (non-blocking)
-# ----------------------------
-st.caption(f"⏱️ Last refreshed at: {st.session_state.last_refreshed.strftime('%Y-%m-%d %H:%M:%S')}")
-
-# Calculate next refresh
-next_refresh_time = st.session_state.last_refreshed + timedelta(milliseconds=DATA_REFRESH_MS)
-seconds_remaining = max(0, int((next_refresh_time - datetime.now()).total_seconds()))
-mins, secs = divmod(seconds_remaining, 60)
-
-st.caption(f"⌛ Next auto-refresh in: **{mins}m {secs:02d}s**")
-    
-
-# ----------------------------
 # Legend
 # ----------------------------
 st.markdown("### 🗺️ Risk Scoring Legend")
@@ -306,5 +303,3 @@ It reflects the likelihood of geomagnetic disturbances affecting GPS and power s
 - 🟠 **Caution** – Some disturbances possible (mainly at mid/high latitudes).  
 - 🔴 **High Risk** – Strong geomagnetic storm likelihood, GPS/power disruptions possible.  
 """)
-
-

@@ -259,7 +259,6 @@ with col_main1:
             layers=[pdk.Layer(
                 "ScatterplotLayer",
                 data=df_display_current,
-                get_position=["Color"],  # Only risk-based colors
                 get_position=["Longitude", "Latitude"],
                 get_color="Color",
                 get_radius=200000,

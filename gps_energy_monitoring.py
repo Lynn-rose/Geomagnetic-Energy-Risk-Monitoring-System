@@ -23,32 +23,33 @@ if "last_refreshed" not in st.session_state:
     st.session_state.last_refreshed = datetime.now()
 if "manual_refresh" not in st.session_state:
     st.session_state.manual_refresh = False
+if "next_refresh_time" not in st.session_state:
+    st.session_state.next_refresh_time = datetime.now() + timedelta(milliseconds=DATA_REFRESH_MS)
 
 # ----------------------------
 # Auto-refresh trigger (every 60s)
 # ----------------------------
 count = st_autorefresh(interval=DATA_REFRESH_MS, limit=None, key="data_refresh")
+
+# When autorefresh happens
 if count > 0:
     st.session_state.last_refreshed = datetime.now()
+    st.session_state.next_refresh_time = st.session_state.last_refreshed + timedelta(milliseconds=DATA_REFRESH_MS)
 
 # ----------------------------
 # Manual refresh button
 # ----------------------------
 if st.button("🔄 Refresh Now"):
-    st.session_state.manual_refresh = True
-
-if st.session_state.manual_refresh:
-    st.session_state.manual_refresh = False
     st.session_state.last_refreshed = datetime.now()
-    st.rerun()  # ✅ force reload
+    st.session_state.next_refresh_time = st.session_state.last_refreshed + timedelta(milliseconds=DATA_REFRESH_MS)
+    st.rerun()
 
 # ----------------------------
-# Countdown (just below refresh button, no flicker)
+# Countdown (stable, no flicker)
 # ----------------------------
 st.caption(f"⏱️ Last refreshed at: {st.session_state.last_refreshed.strftime('%Y-%m-%d %H:%M:%S')}")
 
-next_refresh_time = st.session_state.last_refreshed + timedelta(milliseconds=DATA_REFRESH_MS)
-seconds_remaining = max(0, int((next_refresh_time - datetime.now()).total_seconds()))
+seconds_remaining = max(0, int((st.session_state.next_refresh_time - datetime.now()).total_seconds()))
 mins, secs = divmod(seconds_remaining, 60)
 st.caption(f"⌛ Next auto-refresh in: **{mins}m {secs:02d}s**")
 
@@ -141,7 +142,7 @@ regions = {
     "Rio de Janeiro, Brazil": (-22.9, -43.2),
     "Montevideo, Uruguay": (-34.9, -56.2),
 
-    # --- Asia-Pacific ---
+    # --- Asia & Pacific ---
     "Sydney, Australia": (-33.9, 151.2),
     "Melbourne, Australia": (-37.8, 145.0),
     "Tokyo, Japan": (35.7, 139.7),
@@ -161,7 +162,7 @@ regions = {
     "Dubai, UAE": (25.2, 55.3),
     "Tel Aviv, Israel": (32.1, 34.8),
     "Tehran, Iran": (35.7, 51.4),
-}}
+}
 
 selected_region = st.sidebar.selectbox("🌍 Focus on region:", ["Global"] + list(regions.keys()))
 
@@ -205,8 +206,8 @@ def build_df(kp_value):
         risk = gps_risk(kp_value, lat)
         data.append({
             "City": city,
-            "Latitude": round(lat, 2),   # ✅ rounded to 2dp
-            "Longitude": round(lon, 2),  # ✅ rounded to 2dp
+            "Latitude": round(lat, 2),   # ✅ rounded
+            "Longitude": round(lon, 2),  # ✅ rounded
             "Risk": risk
         })
     df = pd.DataFrame(data)

@@ -21,11 +21,13 @@ DATA_REFRESH_MS = 60000  # refresh data every 60s
 # ----------------------------
 if "last_refreshed" not in st.session_state:
     st.session_state.last_refreshed = datetime.now()
+if "manual_refresh" not in st.session_state:
+    st.session_state.manual_refresh = False
 if "next_refresh_time" not in st.session_state:
     st.session_state.next_refresh_time = datetime.now() + timedelta(milliseconds=DATA_REFRESH_MS)
 
 # ----------------------------
-# Auto-refresh trigger (every 60s for data)
+# Auto-refresh trigger (every 60s)
 # ----------------------------
 count = st_autorefresh(interval=DATA_REFRESH_MS, limit=None, key="data_refresh")
 
@@ -43,18 +45,12 @@ if st.button("🔄 Refresh Now"):
     st.rerun()
 
 # ----------------------------
-# Countdown (live, non-blocking)
+# Countdown (stable, no flicker)
 # ----------------------------
 st.caption(f"⏱️ Last refreshed at: {st.session_state.last_refreshed.strftime('%Y-%m-%d %H:%M:%S')}")
 
-# trigger only the countdown refresh every 1 second
-st_autorefresh(interval=1000, key="countdown_refresh")
-
-# compute remaining seconds
 seconds_remaining = max(0, int((st.session_state.next_refresh_time - datetime.now()).total_seconds()))
 mins, secs = divmod(seconds_remaining, 60)
-
-# live countdown (updates every second without flickering maps/tables)
 st.caption(f"⌛ Next auto-refresh in: **{mins}m {secs:02d}s**")
 
 # ----------------------------

@@ -14,69 +14,107 @@ st.set_page_config(page_title="SolarShield GPS Risk Monitor", layout="wide")
 # ----------------------------
 # Refresh intervals
 # ----------------------------
-data_refresh_ms = 60000     # 1 minute → refresh NOAA data
-countdown_refresh_ms = 1000 # 1 second → update countdown display
+DATA_REFRESH_MS = 60_000     # 1 minute -> actual data refresh
+COUNTDOWN_MS = 1_000         # 1 second -> countdown tick
 
 # ----------------------------
-# Initialize session state
+# Session-state defaults
 # ----------------------------
 if "last_refreshed" not in st.session_state:
     st.session_state.last_refreshed = datetime.now()
-if "manual_refresh" not in st.session_state:
-    st.session_state.manual_refresh = False
+if "manual_refresh_tick" not in st.session_state:
+    st.session_state.manual_refresh_tick = 0
+if "last_refresh_key" not in st.session_state:
+    st.session_state.last_refresh_key = None
 
 # ----------------------------
-# Auto-refresh triggers
+# Autorefresh triggers
 # ----------------------------
-# Trigger data refresh every 60s
-data_count = st_autorefresh(interval=data_refresh_ms, limit=None, key="data_refresh")
-if data_count > 0:
-    st.session_state.last_refreshed = datetime.now()
+# This counter increments only when the DATA_REFRESH_MS elapses
+data_count = st_autorefresh(interval=DATA_REFRESH_MS, limit=None, key="data_refresh")
 
-# Trigger countdown refresh every 1s
-st_autorefresh(interval=countdown_refresh_ms, limit=None, key="countdown_refresh")
+# This triggers reruns every second so we can update the countdown display live.
+st_autorefresh(interval=COUNTDOWN_MS, limit=None, key="countdown_refresh")
 
 # ----------------------------
 # Manual refresh button
 # ----------------------------
 if st.button("🔄 Refresh Now"):
-    st.session_state.manual_refresh = True
+    # bump the manual refresh tick; this will be part of the "refresh key"
+    st.session_state.manual_refresh_tick += 1
+    # we rerun; actual data fetching will occur below because refresh_key changed
+    st.experimental_rerun()
 
-if st.session_state.manual_refresh:
-    st.session_state.manual_refresh = False
+# ----------------------------
+# Functions to fetch data (cached)
+# ----------------------------
+# We'll cache these functions but include a "refresh_key" arg so that
+# the cached value is only invalidated when data_count or manual refresh tick changes.
+
+@st.cache_data
+def fetch_current_kp(refresh_key):
+    """Fetch current Kp from NOAA (1-min JSON). Cached; cache is busted by refresh_key."""
+    url_current = "https://services.swpc.noaa.gov/json/planetary_k_index_1m.json"
+    try:
+        df = pd.read_json(url_current)
+        latest = df.tail(1).iloc[0]
+        return float(latest["kp_index"]), str(latest["time_tag"])
+    except Exception as e:
+        # return None to indicate failure (caller will fallback)
+        return None, None
+
+@st.cache_data
+def fetch_forecast_kp_values(refresh_key):
+    """Fetch forecasted Kp values from SWPC 3-day text file (parse 'Kp indices' lines)."""
+    url_forecast = "https://services.swpc.noaa.gov/text/3-day-forecast.txt"
+    try:
+        resp = requests.get(url_forecast, timeout=10)
+        txt = resp.text
+        kp_values = []
+        for line in txt.splitlines():
+            if "Kp indices" in line:
+                nums = re.findall(r"\d+", line)
+                kp_values.extend([int(n) for n in nums])
+        # If parsing failed, try JSON forecast endpoint as fallback
+        if not kp_values:
+            url_json = "https://services.swpc.noaa.gov/json/planetary_k_index_forecast.json"
+            try:
+                df_json = pd.read_json(url_json)
+                # df_json often contains a 'kp_index' column — try to extract
+                if "kp_index" in df_json.columns:
+                    kp_values = list(map(int, df_json["kp_index"].tolist()))
+            except Exception:
+                pass
+        return kp_values
+    except Exception:
+        return []
+
+# Build the refresh key (changes only when data_count or manual_refresh_tick changes)
+refresh_key = (int(data_count), int(st.session_state.manual_refresh_tick))
+
+# Fetch data (these functions are cached and will only run when refresh_key changes)
+kp_index, time_tag = fetch_current_kp(refresh_key)
+kp_values = fetch_forecast_kp_values(refresh_key)
+
+# If refresh_key changed since last run, update last_refreshed
+if st.session_state.last_refresh_key != refresh_key:
+    st.session_state.last_refresh_key = refresh_key
     st.session_state.last_refreshed = datetime.now()
-    st.rerun()  # ✅ force reload
+
+# If fetch failed, set safe defaults and show a warning
+if kp_index is None:
+    st.warning("Could not fetch current Kp from NOAA — displaying fallback Kp = 0.")
+    kp_index = 0.0
+    time_tag = "Unavailable"
 
 # ----------------------------
-# Fetch NOAA Kp Index (current, 1-minute data)
+# Sidebar: forecast horizon & region selector
 # ----------------------------
-url_current = "https://services.swpc.noaa.gov/json/planetary_k_index_1m.json"
-df_current = pd.read_json(url_current)
-latest = df_current.tail(1).iloc[0]
-kp_index = latest["kp_index"]
-time_tag = latest["time_tag"]
-
-# ----------------------------
-# Fetch NOAA Kp Forecast (3-day text file)
-# ----------------------------
-url_forecast = "https://services.swpc.noaa.gov/text/3-day-forecast.txt"
-forecast_text = requests.get(url_forecast).text
-
-# Collect ALL kp values across lines
-kp_values = []
-for line in forecast_text.splitlines():
-    if "Kp indices" in line:
-        numbers = re.findall(r"\d+", line)
-        kp_values.extend(map(int, numbers))
-
-# Sidebar settings
 st.sidebar.header("⚙️ Settings")
-horizon_options = list(range(1, 9))  # up to 24h ahead (8 steps × 3h)
+horizon_options = list(range(1, 9))  # 1..8 steps (each step = 3 hours)
 selected_horizon = st.sidebar.selectbox("Forecast horizon (3h per step):", horizon_options, index=0)
 
-# ----------------------------
-# Regions
-# ----------------------------
+# Regions list (expanded)
 regions = {
     # --- India ---
     "Hyderabad, India": (17.4, 78.5),
@@ -136,7 +174,7 @@ regions = {
     "Rio de Janeiro, Brazil": (-22.9, -43.2),
     "Montevideo, Uruguay": (-34.9, -56.2),
 
-    # --- Asia ---
+    # --- Asia / Oceania ---
     "Sydney, Australia": (-33.9, 151.2),
     "Melbourne, Australia": (-37.8, 145.0),
     "Tokyo, Japan": (35.7, 139.7),
@@ -161,7 +199,7 @@ regions = {
 selected_region = st.sidebar.selectbox("🌍 Focus on region:", ["Global"] + list(regions.keys()))
 
 # ----------------------------
-# Forecast selection
+# Determine kp_forecast for chosen horizon
 # ----------------------------
 if kp_values:
     if selected_horizon <= len(kp_values):
@@ -170,13 +208,15 @@ if kp_values:
         kp_forecast = kp_values[-1]
     forecast_time = f"{selected_horizon * 3} hours ahead"
 else:
-    kp_forecast = kp_index
+    kp_forecast = kp_index  # fallback
     forecast_time = "Unavailable"
 
 # ----------------------------
 # Risk function
 # ----------------------------
 def gps_risk(kp, latitude):
+    if kp is None:
+        kp = 0
     lat = abs(latitude)
     if lat >= 60:
         if kp >= 4: return "High Risk"
@@ -192,7 +232,7 @@ def gps_risk(kp, latitude):
         else: return "Safe"
 
 # ----------------------------
-# Build DataFrames
+# Build DataFrame (rounded lat/lon)
 # ----------------------------
 def build_df(kp_value):
     data = []
@@ -200,8 +240,8 @@ def build_df(kp_value):
         risk = gps_risk(kp_value, lat)
         data.append({
             "City": city,
-            "Latitude": round(lat, 2),   # ✅ rounded
-            "Longitude": round(lon, 2),  # ✅ rounded
+            "Latitude": round(lat, 2),    # rounded for display
+            "Longitude": round(lon, 2),   # rounded for display
             "Risk": risk
         })
     df = pd.DataFrame(data)
@@ -213,22 +253,28 @@ risk_df_current = build_df(kp_index)
 risk_df_forecast = build_df(kp_forecast)
 
 # ----------------------------
-# Layout
+# Layout and filtering
 # ----------------------------
 st.title("🛰️ SolarShield - GPS Risk Monitor")
 
 col_main1, col_main2 = st.columns(2)
 
-# Map zoom logic
+# Map view logic (center)
 if selected_region == "Global":
     view_state = pdk.ViewState(latitude=20, longitude=0, zoom=1.5, pitch=0)
-    df_display_current = risk_df_current
-    df_display_forecast = risk_df_forecast
+    df_display_current = risk_df_current.copy()
+    df_display_forecast = risk_df_forecast.copy()
 else:
     lat, lon = regions[selected_region]
     view_state = pdk.ViewState(latitude=lat, longitude=lon, zoom=5, pitch=20)
-    df_display_current = risk_df_current[risk_df_current["City"] == selected_region]
-    df_display_forecast = risk_df_forecast[risk_df_forecast["City"] == selected_region]
+    # filter rows for the selected city key exactly
+    df_display_current = risk_df_current[risk_df_current["City"] == selected_region].copy()
+    df_display_forecast = risk_df_forecast[risk_df_forecast["City"] == selected_region].copy()
+    # if filter yields empty (shouldn't), fall back to global
+    if df_display_current.empty:
+        df_display_current = risk_df_current.copy()
+    if df_display_forecast.empty:
+        df_display_forecast = risk_df_forecast.copy()
 
 # ---- Current risks ----
 with col_main1:
@@ -242,9 +288,12 @@ with col_main1:
         else:
             return "background-color: green; color: white"
 
-    st.dataframe(
-        df_display_current.drop(columns=["Color"]).style.applymap(highlight_risk, subset=["Risk"])
-    )
+    # round formatting + styling so lat/lon show only 2 decimals and Risk column is visible
+    styled_current = (df_display_current.drop(columns=["Color"])
+                      .style
+                      .format({"Latitude": "{:.2f}", "Longitude": "{:.2f}"})
+                      .applymap(highlight_risk, subset=["Risk"]))
+    st.dataframe(styled_current)
 
     st.subheader("🌍 Current Risk Map")
     st.pydeck_chart(
@@ -266,9 +315,11 @@ with col_main1:
 with col_main2:
     st.subheader(f"📈 Forecast Risks (Kp={kp_forecast}, Horizon={forecast_time})")
 
-    st.dataframe(
-        df_display_forecast.drop(columns=["Color"]).style.applymap(highlight_risk, subset=["Risk"])
-    )
+    styled_forecast = (df_display_forecast.drop(columns=["Color"])
+                       .style
+                       .format({"Latitude": "{:.2f}", "Longitude": "{:.2f}"})
+                       .applymap(highlight_risk, subset=["Risk"]))
+    st.dataframe(styled_forecast)
 
     st.subheader("🌍 Forecast Risk Map")
     st.pydeck_chart(
@@ -287,10 +338,10 @@ with col_main2:
     )
 
 # ----------------------------
-# Refresh info
+# Refresh / countdown info
 # ----------------------------
 st.caption(f"⏱️ Last refreshed at: {st.session_state.last_refreshed.strftime('%Y-%m-%d %H:%M:%S')}")
-next_refresh_time = st.session_state.last_refreshed + timedelta(milliseconds=data_refresh_ms)
+next_refresh_time = st.session_state.last_refreshed + timedelta(milliseconds=DATA_REFRESH_MS)
 seconds_remaining = max(0, int((next_refresh_time - datetime.now()).total_seconds()))
 mins, secs = divmod(seconds_remaining, 60)
 st.markdown(f"⌛ Next auto-refresh in: **{mins}m {secs:02d}s**")
@@ -299,7 +350,6 @@ st.markdown(f"⌛ Next auto-refresh in: **{mins}m {secs:02d}s**")
 # Legend
 # ----------------------------
 st.markdown("### 🗺️ Risk Scoring Legend")
-
 legend_text = """
 The **risk score** is based on the geomagnetic Kp index and geographic latitude.  
 It reflects the likelihood of geomagnetic disturbances affecting GPS and power systems.

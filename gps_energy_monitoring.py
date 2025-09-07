@@ -191,6 +191,17 @@ risk_df_forecast = build_df(kp_forecast)
 # ----------------------------
 st.title("🛰️ SolarShield - GPS Risk Monitor")
 
+# ---- Refresh controls ----
+col1, col2, col3 = st.columns([1, 1, 2])
+with col1:
+    if st.button("🔄 Refresh Now"):
+        st.experimental_rerun()
+with col2:
+    st.metric("Last Refresh", datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC"))
+with col3:
+    next_refresh = datetime.utcnow().replace(microsecond=0) + pd.Timedelta(seconds=REFRESH_INTERVAL)
+    st.metric("Next Auto-Refresh", next_refresh.strftime("%Y-%m-%d %H:%M:%S UTC"))
+
 # ---- Legend at top ----
 st.markdown("### 🗺️ Risk Scoring Explained (For Local Communities)")
 st.markdown("""

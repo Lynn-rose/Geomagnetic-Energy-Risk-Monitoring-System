@@ -242,12 +242,12 @@ This tool shows how space weather (solar storms) may affect **GPS signals**.
 # Map zoom logic
 # ----------------------------
 if selected_region == "Global":
-    view_state = pdk.ViewState(latitude=20, longitude=0, zoom=1.5, pitch=0)
+    view_state = pdk.ViewState(latitude=20, longitude=0, zoom=1, pitch=0)
     df_display_current = risk_df_current
     df_display_forecast = risk_df_forecast
 else:
     lat, lon = regions[selected_region]
-    view_state = pdk.ViewState(latitude=lat, longitude=lon, zoom=5, pitch=20)
+    view_state = pdk.ViewState(latitude=lat, longitude=lon, zoom=4, pitch=20)
     df_display_current = risk_df_current[risk_df_current["City"] == selected_region]
     df_display_forecast = risk_df_forecast[risk_df_forecast["City"] == selected_region]
 

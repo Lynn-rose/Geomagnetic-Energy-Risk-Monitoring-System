@@ -4,6 +4,7 @@ import pandas as pd
 import pydeck as pdk
 from datetime import datetime, timedelta
 import re
+from streamlit_autorefresh import st_autorefresh
 
 # ----------------------------
 # Page config
@@ -32,15 +33,16 @@ if st.button("🔄 Refresh Now"):
     st.rerun()
 
 # ----------------------------
-# Countdown (non-blocking, recalculated every rerun)
+# Countdown (live with auto-refresh)
 # ----------------------------
+st_autorefresh(interval=1000, key="countdown_refresh")
+
 seconds_remaining = max(0, int((st.session_state.next_refresh_time - datetime.now()).total_seconds()))
 mins, secs = divmod(seconds_remaining, 60)
 
 st.caption(f"⏱️ Last refreshed at: {st.session_state.last_refreshed.strftime('%Y-%m-%d %H:%M:%S')}")
 st.caption(f"⌛ Next auto-refresh in: **{mins}m {secs:02d}s**")
 
-# Auto-refresh trigger
 if seconds_remaining <= 0:
     st.session_state.last_refreshed = datetime.now()
     st.session_state.next_refresh_time = st.session_state.last_refreshed + timedelta(seconds=REFRESH_INTERVAL)
@@ -61,7 +63,6 @@ time_tag = latest["time_tag"]
 url_forecast = "https://services.swpc.noaa.gov/text/3-day-forecast.txt"
 forecast_text = requests.get(url_forecast).text
 
-# Collect ALL kp values across lines
 kp_values = []
 for line in forecast_text.splitlines():
     if "Kp indices" in line:
@@ -177,6 +178,14 @@ def gps_risk(kp, latitude):
         elif kp >= 6: return "Caution"
         else: return "Safe"
 
+def gps_impact(risk):
+    if risk == "Safe":
+        return "Normal"
+    elif risk == "Caution":
+        return "Reduced Accuracy"
+    else:
+        return "Unreliable"
+
 # ----------------------------
 # Build DataFrames
 # ----------------------------
@@ -184,11 +193,11 @@ def build_df(kp_value):
     data = []
     for city, (lat, lon) in regions.items():
         risk = gps_risk(kp_value, lat)
+        impact = gps_impact(risk)
         data.append({
             "City": city,
-            "Latitude": round(lat, 2),
-            "Longitude": round(lon, 2),
-            "Risk": risk
+            "Risk": risk,
+            "Impact on GPS": impact
         })
     df = pd.DataFrame(data)
     color_map = {"Safe": [0, 200, 0], "Caution": [255, 165, 0], "High Risk": [200, 0, 0]}
@@ -202,6 +211,18 @@ risk_df_forecast = build_df(kp_forecast)
 # Layout
 # ----------------------------
 st.title("🛰️ SolarShield - GPS Risk Monitor")
+
+# ---- Legend at the top ----
+st.markdown("### 🗺️ What the Risk Levels Mean (Community Guide)")
+st.markdown("""
+This system shows how space weather (solar storms) may affect GPS in your area.  
+
+- 🟢 **Safe** → GPS works **normally**.  
+- 🟠 **Caution** → GPS may be **less accurate** (your phone or maps may be a few meters off).  
+- 🔴 **High Risk** → GPS may be **unreliable** (directions may fail or jump around).  
+
+⚠️ Please note: Power lines and communication systems may also be affected during high risk times.  
+""")
 
 col_main1, col_main2 = st.columns(2)
 
@@ -238,13 +259,14 @@ with col_main1:
             layers=[pdk.Layer(
                 "ScatterplotLayer",
                 data=df_display_current,
+                get_position=["Color"],  # Only risk-based colors
                 get_position=["Longitude", "Latitude"],
                 get_color="Color",
                 get_radius=200000,
                 pickable=True,
             )],
             initial_view_state=view_state,
-            tooltip={"text": "{City}: {Risk}"}
+            tooltip={"text": "{City}: {Risk} | GPS: {Impact on GPS}"}
         )
     )
 
@@ -268,19 +290,6 @@ with col_main2:
                 pickable=True,
             )],
             initial_view_state=view_state,
-            tooltip={"text": "{City}: {Risk}"}
+            tooltip={"text": "{City}: {Risk} | GPS: {Impact on GPS}"}
         )
     )
-
-# ----------------------------
-# Legend
-# ----------------------------
-st.markdown("### 🗺️ Risk Scoring Legend")
-st.markdown("""
-The **risk score** is based on the geomagnetic Kp index and geographic latitude.  
-It reflects the likelihood of geomagnetic disturbances affecting GPS and power systems.
-
-- 🟢 **Safe** – Minimal disturbance, normal operations expected.  
-- 🟠 **Caution** – Some disturbances possible (mainly at mid/high latitudes).  
-- 🔴 **High Risk** – Strong geomagnetic storm likelihood, GPS/power disruptions possible.  
-""")

@@ -2,9 +2,9 @@ import streamlit as st
 import requests
 import pandas as pd
 import pydeck as pdk
-from streamlit_autorefresh import st_autorefresh
 from datetime import datetime, timedelta
 import re
+import time
 
 # ----------------------------
 # Page config
@@ -14,7 +14,7 @@ st.set_page_config(page_title="SolarShield GPS Risk Monitor", layout="wide")
 # ----------------------------
 # Config
 # ----------------------------
-DATA_REFRESH_MS = 60000  # refresh data every 60s
+REFRESH_INTERVAL = 60  # seconds
 
 # ----------------------------
 # Initialize session state
@@ -22,34 +22,34 @@ DATA_REFRESH_MS = 60000  # refresh data every 60s
 if "last_refreshed" not in st.session_state:
     st.session_state.last_refreshed = datetime.now()
 if "next_refresh_time" not in st.session_state:
-    st.session_state.next_refresh_time = datetime.now() + timedelta(milliseconds=DATA_REFRESH_MS)
-
-# ----------------------------
-# UI auto-refresh trigger (every 1s for countdown)
-# ----------------------------
-tick = st_autorefresh(interval=1000, limit=None, key="ui_refresh")
-
-# Refresh data only every DATA_REFRESH_MS
-now = datetime.now()
-if (now - st.session_state.last_refreshed).total_seconds() * 1000 >= DATA_REFRESH_MS:
-    st.session_state.last_refreshed = now
-    st.session_state.next_refresh_time = now + timedelta(milliseconds=DATA_REFRESH_MS)
+    st.session_state.next_refresh_time = datetime.now() + timedelta(seconds=REFRESH_INTERVAL)
 
 # ----------------------------
 # Manual refresh button
 # ----------------------------
 if st.button("🔄 Refresh Now"):
     st.session_state.last_refreshed = datetime.now()
-    st.session_state.next_refresh_time = st.session_state.last_refreshed + timedelta(milliseconds=DATA_REFRESH_MS)
+    st.session_state.next_refresh_time = st.session_state.last_refreshed + timedelta(seconds=REFRESH_INTERVAL)
     st.rerun()
 
 # ----------------------------
-# Countdown (updates every second)
+# Countdown (live every second)
 # ----------------------------
-st.caption(f"⏱️ Last refreshed at: {st.session_state.last_refreshed.strftime('%Y-%m-%d %H:%M:%S')}")
-seconds_remaining = max(0, int((st.session_state.next_refresh_time - datetime.now()).total_seconds()))
-mins, secs = divmod(seconds_remaining, 60)
-st.caption(f"⌛ Next auto-refresh in: **{mins}m {secs:02d}s**")
+placeholder = st.empty()
+while True:
+    seconds_remaining = max(0, int((st.session_state.next_refresh_time - datetime.now()).total_seconds()))
+    mins, secs = divmod(seconds_remaining, 60)
+
+    with placeholder.container():
+        st.caption(f"⏱️ Last refreshed at: {st.session_state.last_refreshed.strftime('%Y-%m-%d %H:%M:%S')}")
+        st.caption(f"⌛ Next auto-refresh in: **{mins}m {secs:02d}s**")
+
+    if seconds_remaining <= 0:
+        st.session_state.last_refreshed = datetime.now()
+        st.session_state.next_refresh_time = st.session_state.last_refreshed + timedelta(seconds=REFRESH_INTERVAL)
+        st.rerun()
+
+    time.sleep(1)  # update countdown every second
 
 # ----------------------------
 # Fetch NOAA Kp Index (current, 1-minute data)
@@ -66,14 +66,15 @@ time_tag = latest["time_tag"]
 url_forecast = "https://services.swpc.noaa.gov/text/3-day-forecast.txt"
 forecast_text = requests.get(url_forecast).text
 
-# Collect ALL kp values across lines
 kp_values = []
 for line in forecast_text.splitlines():
     if "Kp indices" in line:
         numbers = re.findall(r"\d+", line)
         kp_values.extend(map(int, numbers))
 
+# ----------------------------
 # Sidebar settings
+# ----------------------------
 st.sidebar.header("⚙️ Settings")
 horizon_options = list(range(1, 9))  # up to 24h ahead (8 steps × 3h)
 selected_horizon = st.sidebar.selectbox("Forecast horizon (3h per step):", horizon_options, index=0)
@@ -196,7 +197,7 @@ def gps_risk(kp, latitude):
         else: return "Safe"
 
 # ----------------------------
-# Build DataFrames (rounded lat/lon)
+# Build DataFrames
 # ----------------------------
 def build_df(kp_value):
     data = []
@@ -204,8 +205,8 @@ def build_df(kp_value):
         risk = gps_risk(kp_value, lat)
         data.append({
             "City": city,
-            "Latitude": round(lat, 2),
-            "Longitude": round(lon, 2),
+            "Latitude": round(lat, 2),   # ✅ rounded
+            "Longitude": round(lon, 2),  # ✅ rounded
             "Risk": risk
         })
     df = pd.DataFrame(data)
@@ -220,7 +221,6 @@ risk_df_forecast = build_df(kp_forecast)
 # Layout
 # ----------------------------
 st.title("🛰️ SolarShield - GPS Risk Monitor")
-
 col_main1, col_main2 = st.columns(2)
 
 # Map zoom logic
@@ -246,9 +246,7 @@ with col_main1:
         else:
             return "background-color: green; color: white"
 
-    st.dataframe(
-        df_display_current.drop(columns=["Color"]).style.applymap(highlight_risk, subset=["Risk"])
-    )
+    st.dataframe(df_display_current.drop(columns=["Color"]).style.applymap(highlight_risk, subset=["Risk"]))
 
     st.subheader("🌍 Current Risk Map")
     st.pydeck_chart(
@@ -269,10 +267,7 @@ with col_main1:
 # ---- Forecast risks ----
 with col_main2:
     st.subheader(f"📈 Forecast Risks (Kp={kp_forecast}, Horizon={forecast_time})")
-
-    st.dataframe(
-        df_display_forecast.drop(columns=["Color"]).style.applymap(highlight_risk, subset=["Risk"])
-    )
+    st.dataframe(df_display_forecast.drop(columns=["Color"]).style.applymap(highlight_risk, subset=["Risk"]))
 
     st.subheader("🌍 Forecast Risk Map")
     st.pydeck_chart(

@@ -17,9 +17,36 @@ st.set_page_config(page_title="SolarShield GPS Risk Monitor", layout="wide")
 REFRESH_INTERVAL = 60  # seconds
 
 # ----------------------------
-# Auto-refresh
+# Auto-refresh (data refresh every REFRESH_INTERVAL)
 # ----------------------------
 st_autorefresh(interval=REFRESH_INTERVAL * 1000, key="data_refresh")
+
+# ----------------------------
+# Track refresh times in session state
+# ----------------------------
+if "last_refreshed" not in st.session_state:
+    st.session_state.last_refreshed = datetime.utcnow()
+if "next_refresh_time" not in st.session_state:
+    st.session_state.next_refresh_time = st.session_state.last_refreshed + timedelta(seconds=REFRESH_INTERVAL)
+
+# ----------------------------
+# Refresh controls (stacked neatly)
+# ----------------------------
+col_refresh, _ = st.columns([0.2, 0.8])  # narrow button
+with col_refresh:
+    if st.button("🔄 Refresh Now"):
+        st.session_state.last_refreshed = datetime.utcnow()
+        st.session_state.next_refresh_time = st.session_state.last_refreshed + timedelta(seconds=REFRESH_INTERVAL)
+        st.rerun()
+
+# Countdown + last refresh
+seconds_remaining = max(0, int((st.session_state.next_refresh_time - datetime.utcnow()).total_seconds()))
+mins, secs = divmod(seconds_remaining, 60)
+st.caption(f"🕒 Last refreshed at: {st.session_state.last_refreshed.strftime('%Y-%m-%d %H:%M:%S UTC')}")
+st.caption(f"⌛ Next auto-refresh in: {mins}m {secs:02d}s")
+
+# Keep countdown ticking live
+st_autorefresh(interval=1000, key="countdown_tick")
 
 # ----------------------------
 # Fetch NOAA Kp Index (current, 1-minute data)
@@ -185,22 +212,6 @@ def build_df(kp_value):
 
 risk_df_current = build_df(kp_index)
 risk_df_forecast = build_df(kp_forecast)
-
-# ----------------------------
-# Refresh controls (stacked)
-# ----------------------------
-refresh_placeholder = st.container()
-with refresh_placeholder:
-    if st.button("🔄 Refresh Now", use_container_width=True):
-        st.experimental_rerun()
-
-    st.caption(f"🕒 Last refreshed at: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}")
-
-    # Countdown
-    next_refresh_time = datetime.utcnow() + timedelta(seconds=REFRESH_INTERVAL)
-    seconds_remaining = (next_refresh_time - datetime.utcnow()).seconds
-    mins, secs = divmod(seconds_remaining, 60)
-    st.caption(f"⌛ Next auto-refresh in: {mins}m {secs:02d}s")
 
 # ----------------------------
 # Title

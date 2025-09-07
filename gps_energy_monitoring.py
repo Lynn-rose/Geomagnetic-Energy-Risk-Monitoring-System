@@ -4,7 +4,7 @@ import pandas as pd
 import pydeck as pdk
 from datetime import datetime, timedelta
 import re
-from streamlit_autorefresh import st_autorefresh
+import time
 
 # ----------------------------
 # Page config
@@ -17,11 +17,6 @@ st.set_page_config(page_title="SolarShield GPS Risk Monitor", layout="wide")
 REFRESH_INTERVAL = 60  # seconds
 
 # ----------------------------
-# Auto-refresh (data refresh every REFRESH_INTERVAL)
-# ----------------------------
-st_autorefresh(interval=REFRESH_INTERVAL * 1000, key="data_refresh")
-
-# ----------------------------
 # Track refresh times in session state
 # ----------------------------
 if "last_refreshed" not in st.session_state:
@@ -30,7 +25,7 @@ if "next_refresh_time" not in st.session_state:
     st.session_state.next_refresh_time = st.session_state.last_refreshed + timedelta(seconds=REFRESH_INTERVAL)
 
 # ----------------------------
-# Refresh controls (stacked neatly)
+# Refresh controls
 # ----------------------------
 col_refresh, _ = st.columns([0.2, 0.8])  # narrow button
 with col_refresh:
@@ -39,14 +34,27 @@ with col_refresh:
         st.session_state.next_refresh_time = st.session_state.last_refreshed + timedelta(seconds=REFRESH_INTERVAL)
         st.rerun()
 
-# Countdown + last refresh
-seconds_remaining = max(0, int((st.session_state.next_refresh_time - datetime.utcnow()).total_seconds()))
-mins, secs = divmod(seconds_remaining, 60)
-st.caption(f"🕒 Last refreshed at: {st.session_state.last_refreshed.strftime('%Y-%m-%d %H:%M:%S UTC')}")
-st.caption(f"⌛ Next auto-refresh in: {mins}m {secs:02d}s")
+# ----------------------------
+# Countdown (without flickering maps)
+# ----------------------------
+countdown_placeholder = st.empty()
 
-# Keep countdown ticking live
-st_autorefresh(interval=1000, key="countdown_tick")
+def update_countdown():
+    now = datetime.utcnow()
+    remaining = (st.session_state.next_refresh_time - now).total_seconds()
+    if remaining <= 0:
+        # Time to refresh
+        st.session_state.last_refreshed = datetime.utcnow()
+        st.session_state.next_refresh_time = st.session_state.last_refreshed + timedelta(seconds=REFRESH_INTERVAL)
+        st.rerun()
+    else:
+        mins, secs = divmod(int(remaining), 60)
+        countdown_placeholder.caption(
+            f"🕒 Last refreshed at: {st.session_state.last_refreshed.strftime('%Y-%m-%d %H:%M:%S UTC')} | "
+            f"⌛ Next auto-refresh in: {mins}m {secs:02d}s"
+        )
+
+update_countdown()
 
 # ----------------------------
 # Fetch NOAA Kp Index (current, 1-minute data)

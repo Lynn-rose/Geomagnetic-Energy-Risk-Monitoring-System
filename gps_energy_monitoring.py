@@ -12,9 +12,10 @@ import re
 st.set_page_config(page_title="SolarShield GPS Risk Monitor", layout="wide")
 
 # ----------------------------
-# Config
+# Refresh intervals
 # ----------------------------
-interval_ms = 60000  # 1 minute
+data_refresh_ms = 60000     # 1 minute → refresh NOAA data
+countdown_refresh_ms = 1000 # 1 second → update countdown display
 
 # ----------------------------
 # Initialize session state
@@ -25,11 +26,15 @@ if "manual_refresh" not in st.session_state:
     st.session_state.manual_refresh = False
 
 # ----------------------------
-# Auto-refresh trigger
+# Auto-refresh triggers
 # ----------------------------
-count = st_autorefresh(interval=interval_ms, limit=None, key="data_refresh")
-if count > 0:
+# Trigger data refresh every 60s
+data_count = st_autorefresh(interval=data_refresh_ms, limit=None, key="data_refresh")
+if data_count > 0:
     st.session_state.last_refreshed = datetime.now()
+
+# Trigger countdown refresh every 1s
+st_autorefresh(interval=countdown_refresh_ms, limit=None, key="countdown_refresh")
 
 # ----------------------------
 # Manual refresh button
@@ -193,7 +198,12 @@ def build_df(kp_value):
     data = []
     for city, (lat, lon) in regions.items():
         risk = gps_risk(kp_value, lat)
-        data.append({"City": city, "Latitude": lat, "Longitude": lon, "Risk": risk})
+        data.append({
+            "City": city,
+            "Latitude": round(lat, 2),   # ✅ rounded
+            "Longitude": round(lon, 2),  # ✅ rounded
+            "Risk": risk
+        })
     df = pd.DataFrame(data)
     color_map = {"Safe": [0, 200, 0], "Caution": [255, 165, 0], "High Risk": [200, 0, 0]}
     df["Color"] = df["Risk"].map(color_map)
@@ -280,7 +290,7 @@ with col_main2:
 # Refresh info
 # ----------------------------
 st.caption(f"⏱️ Last refreshed at: {st.session_state.last_refreshed.strftime('%Y-%m-%d %H:%M:%S')}")
-next_refresh_time = st.session_state.last_refreshed + timedelta(milliseconds=interval_ms)
+next_refresh_time = st.session_state.last_refreshed + timedelta(milliseconds=data_refresh_ms)
 seconds_remaining = max(0, int((next_refresh_time - datetime.now()).total_seconds()))
 mins, secs = divmod(seconds_remaining, 60)
 st.markdown(f"⌛ Next auto-refresh in: **{mins}m {secs:02d}s**")

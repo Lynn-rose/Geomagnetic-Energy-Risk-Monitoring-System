@@ -238,9 +238,9 @@ st.markdown("### 🗺️ Risk Scoring Explained (For Local Communities)")
 st.markdown("""
 This tool shows how space weather (solar storms) may affect **GPS signals**.  
 
-- 🟢 **Safe** → GPS works normally.  
-- 🟠 **Caution** → GPS may be **less accurate**.  
-- 🔴 **High Risk** → GPS may be **unreliable** or stop working in some areas.  
+🟢 **Safe** → GPS works normally.  
+🟠 **Caution** → GPS may be **less accurate**.  
+🔴 **High Risk** → GPS may be **unreliable** or stop working in some areas.  
 
 👉 *Think of it like weather alerts: Green = good, Orange = take care, Red = stormy skies for GPS.*
 """)

@@ -258,7 +258,7 @@ col_main1, col_main2 = st.columns(2)
 
 # ---- Current risks ----
 with col_main1:
-    st.subheader(f"📊 Current Risks (Kp={kp_index}, Time={time_tag})")
+    st.subheader(f"📊 Current Risks ")
 
     def highlight_risk(val):
         if val == "High Risk":
@@ -290,7 +290,7 @@ with col_main1:
 
 # ---- Forecast risks ----
 with col_main2:
-    st.subheader(f"📈 Forecast Risks (Kp={kp_forecast}, Horizon={forecast_time})")
+    st.subheader(f"📈 Forecast Risks ")
 
     st.dataframe(
         df_display_forecast.drop(columns=["Latitude", "Longitude", "Color"]).style.applymap(highlight_risk, subset=["Risk"])

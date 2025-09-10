@@ -6,8 +6,7 @@ from datetime import datetime, timedelta
 import re
 import pytz  # for timezone handling
 import json
-from tornado.web import RequestHandler
-from streamlit.web import bootstrap
+from streamlit_js_eval import get_geolocation  # NEW
 
 # ----------------------------
 # Page config
@@ -20,38 +19,14 @@ st.set_page_config(page_title="SolarShield GPS Risk Monitor", layout="wide")
 REFRESH_INTERVAL = 60  # seconds
 
 # ----------------------------
-# Detect browser timezone
+# Detect browser timezone safely
 # ----------------------------
 if "user_timezone" not in st.session_state:
-    st.session_state.user_timezone = "UTC"  # fallback default
+    st.session_state.user_timezone = "UTC"  # fallback
 
-st.markdown(
-    """
-    <script>
-        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        fetch("/_stcore/_timezone", {
-            method: "POST",
-            body: JSON.stringify({ tz: timezone }),
-            headers: { "Content-Type": "application/json" }
-        });
-    </script>
-    """,
-    unsafe_allow_html=True
-)
-
-def timezone_receiver():
-    class TZHandler(RequestHandler):
-        def post(self):
-            data = json.loads(self.request.body)
-            st.session_state.user_timezone = data["tz"]
-            self.write("ok")
-
-    return ("/_stcore/_timezone", TZHandler)
-
-# Register handler once
-if "_tz_handler_registered" not in st.session_state:
-    bootstrap._on_server_start(timezone_receiver())
-    st.session_state._tz_handler_registered = True
+geo = get_geolocation()
+if geo and "timezone" in geo:
+    st.session_state.user_timezone = geo["timezone"]
 
 # ----------------------------
 # Track refresh times in session state

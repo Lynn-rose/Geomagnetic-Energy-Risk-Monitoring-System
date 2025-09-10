@@ -4,8 +4,8 @@ import pandas as pd
 import pydeck as pdk
 from datetime import datetime, timedelta
 import re
-import time
-import pytz  # for timezone handling
+import pytz
+import streamlit.components.v1 as components
 
 # ----------------------------
 # Page config
@@ -16,7 +16,28 @@ st.set_page_config(page_title="SolarShield GPS Risk Monitor", layout="wide")
 # Config
 # ----------------------------
 REFRESH_INTERVAL = 60  # seconds
-USER_TIMEZONE = "Africa/Nairobi"  # change this if needed
+
+# ----------------------------
+# Detect browser timezone
+# ----------------------------
+if "user_timezone" not in st.session_state:
+    st.session_state.user_timezone = "UTC"  # fallback
+
+components.html(
+    """
+    <script>
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const params = new URLSearchParams(window.location.search);
+        params.set("tz", tz);
+        window.location.search = params.toString();
+    </script>
+    """,
+    height=0,
+)
+
+qs = st.experimental_get_query_params()
+if "tz" in qs:
+    st.session_state.user_timezone = qs["tz"][0]
 
 # ----------------------------
 # Track refresh times in session state
@@ -29,7 +50,7 @@ if "next_refresh_time" not in st.session_state:
 # ----------------------------
 # Refresh controls
 # ----------------------------
-col_refresh, _ = st.columns([0.2, 0.8])  # narrow button
+col_refresh, _ = st.columns([0.2, 0.8])
 with col_refresh:
     if st.button("🔄 Refresh Now"):
         st.session_state.last_refreshed = datetime.now(pytz.utc)
@@ -37,7 +58,7 @@ with col_refresh:
         st.rerun()
 
 # ----------------------------
-# Countdown (with local timezone)
+# Countdown (browser timezone)
 # ----------------------------
 countdown_placeholder = st.empty()
 
@@ -45,12 +66,14 @@ def update_countdown():
     now = datetime.now(pytz.utc)
     remaining = (st.session_state.next_refresh_time - now).total_seconds()
 
-    # Convert refresh time to user’s local timezone
-    tz = pytz.timezone(USER_TIMEZONE)
+    tzname = st.session_state.user_timezone
+    try:
+        tz = pytz.timezone(tzname)
+    except Exception:
+        tz = pytz.utc
     last_local = st.session_state.last_refreshed.astimezone(tz)
 
     if remaining <= 0:
-        # Time to refresh
         st.session_state.last_refreshed = datetime.now(pytz.utc)
         st.session_state.next_refresh_time = st.session_state.last_refreshed + timedelta(seconds=REFRESH_INTERVAL)
         st.rerun()
@@ -58,7 +81,7 @@ def update_countdown():
         mins, secs = divmod(int(remaining), 60)
         countdown_placeholder.caption(
             f"🕒 Last refreshed at: {last_local.strftime('%d-%m-%Y %H:%M:%S %Z')} | "
-            f"⌛ Next auto-refresh in: {mins}m {secs:02d}s"
+            f"⌛ Next auto-refresh in: {mins}m {secs:02d}s | 🌍 Timezone: {tzname}"
         )
 
 update_countdown()
@@ -173,6 +196,7 @@ regions = {
     "Tel Aviv, Israel": (32.1, 34.8),
     "Tehran, Iran": (35.7, 51.4),
 }
+
 selected_region = st.sidebar.selectbox("🌍 Focus on region:", ["Global"] + list(regions.keys()))
 
 # ----------------------------
@@ -233,16 +257,11 @@ risk_df_forecast = build_df(kp_forecast)
 # ----------------------------
 st.title("🛰️ SolarShield - GPS Risk Monitor")
 
-# ---- Legend at top ----
-st.markdown("### 🗺️ Risk Scoring Explained (For Local Communities)")
+st.markdown("### 🗺️ Risk Scoring Explained")
 st.markdown("""
-This tool shows how space weather (solar storms) may affect **GPS signals**.  
-
-- 🟢 **Safe** → GPS works normally.  
-- 🟠 **Caution** → GPS may be **less accurate**.  
-- 🔴 **High Risk** → GPS may be **unreliable** or stop working in some areas.  
-
-👉 *Think of it like weather alerts: Green = good, Orange = take care, Red = stormy skies for GPS.*
+🟢 **Safe** → GPS works normally.  
+🟠 **Caution** → GPS may be less accurate.  
+🔴 **High Risk** → GPS may be unreliable.  
 """)
 
 # ----------------------------
@@ -265,7 +284,7 @@ col_main1, col_main2 = st.columns(2)
 
 # ---- Current risks ----
 with col_main1:
-    st.subheader(f"📊 Current Risks ")
+    st.subheader("📊 Current Risks")
 
     def highlight_risk(val):
         if val == "High Risk":
@@ -297,7 +316,7 @@ with col_main1:
 
 # ---- Forecast risks ----
 with col_main2:
-    st.subheader(f"📈 Forecast Risks ")
+    st.subheader("📈 Forecast Risks")
 
     st.dataframe(
         df_display_forecast.drop(columns=["Latitude", "Longitude", "Color"]).style.applymap(highlight_risk, subset=["Risk"])

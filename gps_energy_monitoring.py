@@ -4,8 +4,10 @@ import pandas as pd
 import pydeck as pdk
 from datetime import datetime, timedelta
 import re
-import time
 import pytz  # for timezone handling
+import json
+from tornado.web import RequestHandler
+from streamlit.web import bootstrap
 
 # ----------------------------
 # Page config
@@ -16,7 +18,40 @@ st.set_page_config(page_title="SolarShield GPS Risk Monitor", layout="wide")
 # Config
 # ----------------------------
 REFRESH_INTERVAL = 60  # seconds
-USER_TIMEZONE = "Africa/Nairobi"  # change this if needed
+
+# ----------------------------
+# Detect browser timezone
+# ----------------------------
+if "user_timezone" not in st.session_state:
+    st.session_state.user_timezone = "UTC"  # fallback default
+
+st.markdown(
+    """
+    <script>
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        fetch("/_stcore/_timezone", {
+            method: "POST",
+            body: JSON.stringify({ tz: timezone }),
+            headers: { "Content-Type": "application/json" }
+        });
+    </script>
+    """,
+    unsafe_allow_html=True
+)
+
+def timezone_receiver():
+    class TZHandler(RequestHandler):
+        def post(self):
+            data = json.loads(self.request.body)
+            st.session_state.user_timezone = data["tz"]
+            self.write("ok")
+
+    return ("/_stcore/_timezone", TZHandler)
+
+# Register handler once
+if "_tz_handler_registered" not in st.session_state:
+    bootstrap._on_server_start(timezone_receiver())
+    st.session_state._tz_handler_registered = True
 
 # ----------------------------
 # Track refresh times in session state
@@ -37,7 +72,7 @@ with col_refresh:
         st.rerun()
 
 # ----------------------------
-# Countdown (with local timezone)
+# Countdown (with auto-detected timezone)
 # ----------------------------
 countdown_placeholder = st.empty()
 
@@ -46,7 +81,11 @@ def update_countdown():
     remaining = (st.session_state.next_refresh_time - now).total_seconds()
 
     # Convert refresh time to user’s local timezone
-    tz = pytz.timezone(USER_TIMEZONE)
+    tzname = st.session_state.user_timezone
+    try:
+        tz = pytz.timezone(tzname)
+    except Exception:
+        tz = pytz.utc
     last_local = st.session_state.last_refreshed.astimezone(tz)
 
     if remaining <= 0:
@@ -58,7 +97,7 @@ def update_countdown():
         mins, secs = divmod(int(remaining), 60)
         countdown_placeholder.caption(
             f"🕒 Last refreshed at: {last_local.strftime('%d-%m-%Y %H:%M:%S %Z')} | "
-            f"⌛ Next auto-refresh in: {mins}m {secs:02d}s"
+            f"⌛ Next auto-refresh in: {mins}m {secs:02d}s | 🌍 Timezone: {tzname}"
         )
 
 update_countdown()
@@ -173,6 +212,7 @@ regions = {
     "Tel Aviv, Israel": (32.1, 34.8),
     "Tehran, Iran": (35.7, 51.4),
 }
+
 selected_region = st.sidebar.selectbox("🌍 Focus on region:", ["Global"] + list(regions.keys()))
 
 # ----------------------------

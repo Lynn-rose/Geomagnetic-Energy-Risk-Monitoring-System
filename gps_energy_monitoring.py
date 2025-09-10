@@ -35,6 +35,16 @@ with col_refresh:
         st.rerun()
 
 # ----------------------------
+# Display formatted refresh times
+# ----------------------------
+st.markdown(
+    f"""
+    **Last Refreshed:** {st.session_state.last_refreshed.strftime('%d-%m-%Y %H:%M:%S')}  
+    **Next Refresh:** {st.session_state.next_refresh_time.strftime('%d-%m-%Y %H:%M:%S')}
+    """
+)
+
+# ----------------------------
 # Countdown (without flickering maps)
 # ----------------------------
 countdown_placeholder = st.empty()
@@ -79,7 +89,7 @@ for line in forecast_text.splitlines():
         kp_values.extend(map(int, numbers))
 
 # Sidebar settings
-st.sidebar.header("⚙️ Settings")
+st.sidebar.header("⚙️ Menu")
 horizon_options = list(range(1, 9))  # up to 24h ahead (8 steps × 3h)
 selected_horizon = st.sidebar.selectbox("Forecast horizon (3h per step):", horizon_options, index=0)
 

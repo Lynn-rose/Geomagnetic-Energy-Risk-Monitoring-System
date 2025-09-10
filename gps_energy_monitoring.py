@@ -34,15 +34,6 @@ with col_refresh:
         st.session_state.next_refresh_time = st.session_state.last_refreshed + timedelta(seconds=REFRESH_INTERVAL)
         st.rerun()
 
-# ----------------------------
-# Display formatted refresh times
-# ----------------------------
-st.markdown(
-    f"""
-    **Last Refreshed:** {st.session_state.last_refreshed.strftime('%d-%m-%Y %H:%M:%S')}  
-    **Next Refresh:** {st.session_state.next_refresh_time.strftime('%d-%m-%Y %H:%M:%S')}
-    """
-)
 
 # ----------------------------
 # Countdown (without flickering maps)
@@ -60,7 +51,7 @@ def update_countdown():
     else:
         mins, secs = divmod(int(remaining), 60)
         countdown_placeholder.caption(
-            f"🕒 Last refreshed at: {st.session_state.last_refreshed.strftime('%Y-%m-%d %H:%M:%S UTC')} | "
+            f"🕒 Last refreshed at: {st.session_state.last_refreshed.strftime('%d-%m-%Y %H:%M:%S UTC')} | "
             f"⌛ Next auto-refresh in: {mins}m {secs:02d}s"
         )
 

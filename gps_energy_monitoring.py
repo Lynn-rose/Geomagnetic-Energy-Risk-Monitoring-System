@@ -5,6 +5,7 @@ import pydeck as pdk
 from datetime import datetime, timedelta
 import re
 import time
+import pytz  # for timezone handling
 
 # ----------------------------
 # Page config
@@ -15,12 +16,13 @@ st.set_page_config(page_title="SolarShield GPS Risk Monitor", layout="wide")
 # Config
 # ----------------------------
 REFRESH_INTERVAL = 60  # seconds
+USER_TIMEZONE = "Africa/Nairobi"  # change this if needed
 
 # ----------------------------
 # Track refresh times in session state
 # ----------------------------
 if "last_refreshed" not in st.session_state:
-    st.session_state.last_refreshed = datetime.utcnow()
+    st.session_state.last_refreshed = datetime.now(pytz.utc)
 if "next_refresh_time" not in st.session_state:
     st.session_state.next_refresh_time = st.session_state.last_refreshed + timedelta(seconds=REFRESH_INTERVAL)
 
@@ -30,28 +32,32 @@ if "next_refresh_time" not in st.session_state:
 col_refresh, _ = st.columns([0.2, 0.8])  # narrow button
 with col_refresh:
     if st.button("🔄 Refresh Now"):
-        st.session_state.last_refreshed = datetime.utcnow()
+        st.session_state.last_refreshed = datetime.now(pytz.utc)
         st.session_state.next_refresh_time = st.session_state.last_refreshed + timedelta(seconds=REFRESH_INTERVAL)
         st.rerun()
 
-
 # ----------------------------
-# Countdown (without flickering maps)
+# Countdown (with local timezone)
 # ----------------------------
 countdown_placeholder = st.empty()
 
 def update_countdown():
-    now = datetime.utcnow()
+    now = datetime.now(pytz.utc)
     remaining = (st.session_state.next_refresh_time - now).total_seconds()
+
+    # Convert refresh time to user’s local timezone
+    tz = pytz.timezone(USER_TIMEZONE)
+    last_local = st.session_state.last_refreshed.astimezone(tz)
+
     if remaining <= 0:
         # Time to refresh
-        st.session_state.last_refreshed = datetime.utcnow()
+        st.session_state.last_refreshed = datetime.now(pytz.utc)
         st.session_state.next_refresh_time = st.session_state.last_refreshed + timedelta(seconds=REFRESH_INTERVAL)
         st.rerun()
     else:
         mins, secs = divmod(int(remaining), 60)
         countdown_placeholder.caption(
-            f"🕒 Last refreshed at: {st.session_state.last_refreshed.strftime('%d-%m-%Y %H:%M:%S UTC')} | "
+            f"🕒 Last refreshed at: {last_local.strftime('%d-%m-%Y %H:%M:%S %Z')} | "
             f"⌛ Next auto-refresh in: {mins}m {secs:02d}s"
         )
 

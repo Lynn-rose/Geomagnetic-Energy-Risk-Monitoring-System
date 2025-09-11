@@ -121,7 +121,7 @@ Developed by **Nan in Space**
 
 - Lynn Rose [lynn90952@gmail.com](https://www.linkedin.com/in/lynn-achieng-382939192/)
             
- - Ann Kandie [annkandie@yahoo.com](https://www.linkedin.com/in/ann-kandie-121b3481)
+ -  [Ann Kandie](https://www.linkedin.com/in/ann-kandie-121b3481)
 
 - Kariuki Reuben [kariukireuben734@gmail.com](https://www.linkedin.com/in/kr2026/ )
 

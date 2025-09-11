@@ -84,9 +84,9 @@ Use the Refresh Now button or let the app auto-refresh every 60s.
 
 NOAA SWPC:
 
-Current Kp Index: planetary_k_index_1m.json
+Current Kp Index: [planetary_k_index_1m.json](https://services.swpc.noaa.gov/json/planetary_k_index_1m.json)
 
-Forecast: 3-day-forecast.txt
+Forecast: [3-day-forecast.txt](https://services.swpc.noaa.gov/text/3-day-forecast.txt)
 
 ### **📸 Screenshots**
 Global Risk Overview

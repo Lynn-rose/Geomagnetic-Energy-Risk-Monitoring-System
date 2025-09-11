@@ -18,8 +18,8 @@ Try it live here:
 
 ### **🚀 Powerpoint presentation**
 
-Try it live here:
-👉 [SolarShield GPS Risk Monitor](https://geomagnetic-energy-risk-monitoring-system-bqpbrbuln3hnxkrct3iv.streamlit.app/)
+Find the .ppt here:
+👉 [SolarShield GPS Risk Monitor](https://github.com/Lynn-rose/Geomagnetic-Energy-Risk-Monitoring-System/blob/main/SolarShield%20Presentation%20-%20NanInSpace%20Group.pptx)
 
  ### **✨ Features**
 

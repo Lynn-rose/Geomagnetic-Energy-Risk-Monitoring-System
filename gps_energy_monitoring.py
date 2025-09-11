@@ -262,6 +262,7 @@ st.markdown("""
 🟢 **Safe** → GPS works normally.  
 🟠 **Caution** → GPS may be less accurate.  
 🔴 **High Risk** → GPS may be unreliable.  
+👉 *Think of it like weather alerts: Green = good, Orange = take care, Red = stormy skies for GPS.*
 """)
 
 # ----------------------------

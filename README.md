@@ -1,4 +1,4 @@
-🛰️ SolarShield - GPS Risk Monitor
+## 🛰️ SolarShield - GPS Risk Monitor
 
 A Streamlit web application that monitors space weather (solar storms) and their potential impact on GPS signal reliability across different regions of the world.
 
@@ -10,16 +10,21 @@ The app integrates live Kp index data and 3-day forecasts from NOAA SWPC and tra
 
 🔴 High Risk → GPS may be unreliable
 
-✨ Features
+ ### ✨ Features
 
 ✅ Live fetch of NOAA planetary Kp index (1-minute cadence)
+
 ✅ Auto-refresh with countdown & browser timezone detection
+
 ✅ Interactive maps showing risk levels across global regions
+
 ✅ Side-by-side view: current risks vs forecasted risks
+
 ✅ Simple, community-friendly risk scoring explanation
+
 ✅ Focus on a specific region or city or view global risks
 
-🛠️ Tech Stack
+### 🛠️ Tech Stack
 
 Python 3.11
 
@@ -38,11 +43,11 @@ Requests
 pytz
  – timezone handling
 
-📦 Installation
+### 📦 Installation
 
 Clone this repo:
 
-git clone https://github.com/Lynn-rose/Geomagnetic-Energy-Risk-Monitoring-System.git
+`git clone https://github.com/Lynn-rose/Geomagnetic-Energy-Risk-Monitoring-System.git`
 cd Geomagnetic-Energy-Risk-Monitoring-System
 
 
@@ -64,7 +69,7 @@ Run the app:
 
 streamlit run app.py
 
-🌍 Usage
+### 🌍 Usage
 
 Open the app in your browser (Streamlit will give you a local URL).
 
@@ -76,7 +81,7 @@ Hover over map points to view risk details for each city.
 
 Use the Refresh Now button or let the app auto-refresh every 60s.
 
-📡 Data Sources
+### 📡 Data Sources
 
 NOAA SWPC:
 
@@ -84,7 +89,7 @@ Current Kp Index: planetary_k_index_1m.json
 
 Forecast: 3-day-forecast.txt
 
-📸 Screenshots
+### 📸 Screenshots
 Global Risk Overview
 
 ![GLOBAL]({486C3B9B-1EF3-46BF-AFD8-AA34E816069A}.png)
@@ -103,7 +108,7 @@ Regional Focus (e.g., Nairobi, Kenya)
 
  Email/SMS alerts for high-risk periods
 
-👨‍💻 Author
+### 👨‍💻 Author
 
 Developed by [Nan in Space]
 ✉️ Contact: - Leonard Gachimu [leogachimu@gmail.com]
@@ -113,5 +118,5 @@ Developed by [Nan in Space]
             - Ann Kandie [annkandie@yahoo.com]
 
             - Kariuki Reuben [kariukireuben734@gmail.com]
-            
+
             - Bismita [bismitain@gmail.com]

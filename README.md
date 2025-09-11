@@ -16,6 +16,11 @@ The app integrates live Kp index data and 3-day forecasts from NOAA SWPC and tra
 Try it live here:
 👉 [SolarShield GPS Risk Monitor](https://geomagnetic-energy-risk-monitoring-system-bqpbrbuln3hnxkrct3iv.streamlit.app/)
 
+### **🚀 Powerpoint presentation**
+
+Try it live here:
+👉 [SolarShield GPS Risk Monitor](https://geomagnetic-energy-risk-monitoring-system-bqpbrbuln3hnxkrct3iv.streamlit.app/)
+
  ### **✨ Features**
 
 ✅ Live fetch of NOAA planetary Kp index (1-minute cadence)
@@ -105,19 +110,19 @@ Regional Focus (e.g., Nairobi, Kenya)
 
  Historical Kp trends visualization
 
- Email/SMS alerts for high-risk periods
+ Whatsapp/SMS alerts for high-risk periods
 
 ### **👨‍💻 Author**
 
-Developed by [Nan in Space]
+Developed by **Nan in Space**
 
 ✉️ Contact: 
-- Leonard Gachimu [leogachimu@gmail.com] 
+- Leonard Gachimu [leogachimu@gmail.com](https://www.linkedin.com/in/leonard-gachimu/)
 
-- Lynn Rose [lynn90952@gmail.com]
+- Lynn Rose [lynn90952@gmail.com](https://www.linkedin.com/in/lynn-achieng-382939192/)
             
- - Ann Kandie [annkandie@yahoo.com]
+ - Ann Kandie [annkandie@yahoo.com](https://www.linkedin.com/in/ann-kandie-121b3481)
 
-- Kariuki Reuben [kariukireuben734@gmail.com]
+- Kariuki Reuben [kariukireuben734@gmail.com](https://www.linkedin.com/in/kr2026/ )
 
-- Bismita [bismitain@gmail.com]
+- Bismita [bismitain@gmail.com](https://www.linkedin.com/in/bismita-hazarika-49275357/)

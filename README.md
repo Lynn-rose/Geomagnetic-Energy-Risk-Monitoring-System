@@ -112,11 +112,7 @@ Regional Focus (e.g., Nairobi, Kenya)
 Developed by [Nan in Space]
 
 ✉️ Contact: - Leonard Gachimu [leogachimu@gmail.com]
-
             - Lynn Rose [lynn90952@gmail.com]
-
             - Ann Kandie [annkandie@yahoo.com]
-
             - Kariuki Reuben [kariukireuben734@gmail.com]
-
             - Bismita [bismitain@gmail.com]

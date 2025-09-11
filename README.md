@@ -1,4 +1,4 @@
-## 🛰️ SolarShield - GPS Risk Monitor
+## **🛰️ SolarShield - GPS Risk Monitor**
 
 A Streamlit web application that monitors space weather (solar storms) and their potential impact on GPS signal reliability across different regions of the world.
 
@@ -10,7 +10,13 @@ The app integrates live Kp index data and 3-day forecasts from NOAA SWPC and tra
 
 🔴 High Risk → GPS may be unreliable
 
- ### ✨ Features
+
+### **🚀 Deployed App**
+
+Try it live here:
+👉 SolarShield GPS Risk Monitor https://geomagnetic-energy-risk-monitoring-system-bqpbrbuln3hnxkrct3iv.streamlit.app/
+
+ ### **✨ Features**
 
 ✅ Live fetch of NOAA planetary Kp index (1-minute cadence)
 
@@ -24,7 +30,7 @@ The app integrates live Kp index data and 3-day forecasts from NOAA SWPC and tra
 
 ✅ Focus on a specific region or city or view global risks
 
-### 🛠️ Tech Stack
+### **🛠️ Tech Stack**
 
 Python 3.11
 
@@ -43,33 +49,26 @@ Requests
 pytz
  – timezone handling
 
-### 📦 Installation
+### **📦 Installation**
 
 Clone this repo:
 
 `git clone https://github.com/Lynn-rose/Geomagnetic-Energy-Risk-Monitoring-System.git`
-cd Geomagnetic-Energy-Risk-Monitoring-System
+
+`cd Geomagnetic-Energy-Risk-Monitoring-System`
 
 
 Create a virtual environment and install dependencies:
 
-pip install -r requirements.txt
-
-
-requirements.txt :
-
-streamlit
-pandas
-requests
-pydeck
-pytz
+`pip install -r requirements.txt`
 
 
 Run the app:
 
-streamlit run app.py
+`streamlit run app.py`
 
-### 🌍 Usage
+
+### **🌍 Usage**
 
 Open the app in your browser (Streamlit will give you a local URL).
 
@@ -81,7 +80,7 @@ Hover over map points to view risk details for each city.
 
 Use the Refresh Now button or let the app auto-refresh every 60s.
 
-### 📡 Data Sources
+### **📡 Data Sources**
 
 NOAA SWPC:
 
@@ -89,7 +88,7 @@ Current Kp Index: planetary_k_index_1m.json
 
 Forecast: 3-day-forecast.txt
 
-### 📸 Screenshots
+### **📸 Screenshots**
 Global Risk Overview
 
 ![GLOBAL]({486C3B9B-1EF3-46BF-AFD8-AA34E816069A}.png)
@@ -98,7 +97,7 @@ Regional Focus (e.g., Nairobi, Kenya)
 
 ![Nairobi]({ED6B07D6-51EF-4CE9-A1FF-02F2A3274BA0}.png)
 
-🚀 Future Improvements
+### **🚀 Future Improvements**
 
  Add mobile-friendly UI tweaks
 
@@ -108,12 +107,13 @@ Regional Focus (e.g., Nairobi, Kenya)
 
  Email/SMS alerts for high-risk periods
 
-### 👨‍💻 Author
+### **👨‍💻 Author**
 
 Developed by [Nan in Space]
+
 ✉️ Contact: - Leonard Gachimu [leogachimu@gmail.com]
 
-            - Lynn Rose [leogachimu@gmail.com]
+            - Lynn Rose [lynn90952@gmail.com]
 
             - Ann Kandie [annkandie@yahoo.com]
 

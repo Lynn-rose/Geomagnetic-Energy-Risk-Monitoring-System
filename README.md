@@ -14,7 +14,7 @@ The app integrates live Kp index data and 3-day forecasts from NOAA SWPC and tra
 ### **🚀 Deployed App**
 
 Try it live here:
-👉 SolarShield GPS Risk Monitor https://geomagnetic-energy-risk-monitoring-system-bqpbrbuln3hnxkrct3iv.streamlit.app/
+👉 [SolarShield GPS Risk Monitor](https://geomagnetic-energy-risk-monitoring-system-bqpbrbuln3hnxkrct3iv.streamlit.app/)
 
  ### **✨ Features**
 
@@ -111,8 +111,13 @@ Regional Focus (e.g., Nairobi, Kenya)
 
 Developed by [Nan in Space]
 
-✉️ Contact: - Leonard Gachimu [leogachimu@gmail.com]
-            - Lynn Rose [lynn90952@gmail.com]
-            - Ann Kandie [annkandie@yahoo.com]
-            - Kariuki Reuben [kariukireuben734@gmail.com]
-            - Bismita [bismitain@gmail.com]
+✉️ Contact: 
+- Leonard Gachimu [leogachimu@gmail.com] 
+
+- Lynn Rose [lynn90952@gmail.com]
+            
+ - Ann Kandie [annkandie@yahoo.com]
+
+- Kariuki Reuben [kariukireuben734@gmail.com]
+
+- Bismita [bismitain@gmail.com]
